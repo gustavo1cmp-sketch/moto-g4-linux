@@ -31,6 +31,8 @@ GB = 1024 ** 3
 VAO_BOTAO, MARGEM = 12, 20
 TOPO = 130  # faixa do relógio; os cartões começam abaixo dela
 RELOGIO = (0, 0, 420, TOPO)  # área de toque que gira a tela
+DIAS = ("seg", "ter", "qua", "qui", "sex", "sáb", "dom")  # sem depender de locale no Alpine
+MESES = ("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
 AREA_BICHINHO = (620, 400, 1300, 960)  # toque aqui = carinho
 LADO_CAPA_GRANDE = 680
 PAGINAS = ("painel", "tocando", "bichinho")  # arrastar para o lado troca a página; nova função = nova página aqui
@@ -263,7 +265,7 @@ class Tela:
         self.Image, self.ImageDraw = Image, ImageDraw
         fonte = lambda tamanho, negrito=False: ImageFont.truetype(
             "/usr/share/fonts/dejavu/DejaVuSans%s.ttf" % ("-Bold" if negrito else ""), tamanho)
-        self.f = {"hora": fonte(88), "titulo": fonte(46, True), "valor": fonte(96), "valor_menor": fonte(80),
+        self.f = {"hora": fonte(88), "data": fonte(44),"titulo": fonte(46, True), "valor": fonte(96), "valor_menor": fonte(80),
                   "detalhe": fonte(36), "musica": fonte(38, True), "grande_titulo": fonte(64, True), "grande_artista": fonte(44), "pequena": fonte(30), "aviso": fonte(36), "descanso": fonte(300),
                   "descanso_txt": fonte(40)}
         self.fb = os.open("/dev/fb0", os.O_RDWR)
@@ -283,6 +285,14 @@ class Tela:
 
     def texto(self, d, xy, txt, fonte, cor, ancora="la"):
         d.text(xy, txt, font=self.f[fonte], fill=cor, anchor=ancora)
+
+    def relogio(self, d, hora):
+        """Hora no canto do topo e a data logo ao lado ("qui, 26 nov")."""
+        self.texto(d, (MARGEM + 8, TOPO // 2 + 4), hora, "hora", TEXTO, "lm")
+        t = time.localtime()
+        data = "%s, %d %s" % (DIAS[t.tm_wday], t.tm_mday, MESES[t.tm_mon - 1])
+        x = MARGEM + 8 + d.textlength(hora, font=self.f["hora"]) + 28
+        self.texto(d, (x, TOPO // 2 + 8), data, "data", SECUNDARIO, "lm")
 
     def descanso(self, hora):
         img = self.Image.new("RGB", (LARGURA, ALTURA), "black")
@@ -324,7 +334,7 @@ class Tela:
     def tocando(self, hora, dados, apertado, capa_grande):
         img = self.Image.new("RGB", (LARGURA, ALTURA), FUNDO)
         d = self.ImageDraw.Draw(img)
-        self.texto(d, (MARGEM + 8, TOPO // 2 + 4), hora, "hora", TEXTO, "lm")
+        self.relogio(d, hora)
         midia = dados.get("midia")
         if not isinstance(midia, dict):
             self.texto(d, (LARGURA // 2, ALTURA // 2), "Nada tocando no PC", "valor_menor", SECUNDARIO, "mm")
@@ -352,7 +362,7 @@ class Tela:
         pequeno = bichinho.desenhar(self.Image, self.ImageDraw, estado, int(agora * 4), time.localtime().tm_hour)
         img = pequeno.resize((LARGURA, ALTURA), self.Image.NEAREST)
         d = self.ImageDraw.Draw(img)
-        self.texto(d, (MARGEM + 8, TOPO // 2 + 4), hora, "hora", TEXTO, "lm")
+        self.relogio(d, hora)
         frase = self.cortar(d, frase, "grande_artista", 1300)
         largura = d.textlength(frase, font=self.f["grande_artista"]) + 80
         x0, y0, y1 = LARGURA // 2 - largura // 2, 220, 330
@@ -446,7 +456,7 @@ class Tela:
     def painel(self, hora, dados, hist, apertado):
         img = self.Image.new("RGB", (LARGURA, ALTURA), FUNDO)
         d = self.ImageDraw.Draw(img)
-        self.texto(d, (MARGEM + 8, TOPO // 2 + 4), hora, "hora", TEXTO, "lm")
+        self.relogio(d, hora)
         if not dados.get("afterburner"):
             self.texto(d, (LARGURA - MARGEM - 8, TOPO // 2 + 4), "Abra o MSI Afterburner", "aviso", AVISO, "rm")
         c = cartoes()
