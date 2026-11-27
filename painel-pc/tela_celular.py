@@ -39,19 +39,19 @@ SERIES = ("cpu", "cpu_temp", "gpu", "gpu_temp")
 PERFIS = (("silencioso", "Silencioso"), ("normal", "Normal"), ("jogo", "Jogo"))  # mesmos nomes do painel.py
 
 # Visual "gamer": fundo quase preto com grade, bordas neon que mudam de cor com a temperatura.
-FUNDO, GRADE, CARTAO, BOTAO, BOTAO_ATIVO = "#07040e", "#150c26", "#0e091c", "#170f2c", "#2e1d56"
-TEXTO, SECUNDARIO, LINHA, DESCANSO_COR = "#f3ecff", "#9b8cba", "#251a3e", "#463a63"
-ROXO, LILAS, MAGENTA, VERMELHO, LARANJA, AVISO = "#a259ff", "#d4b8ff", "#ff2bd6", "#ff3355", "#ff8c1a", "#ffd000"
-COR_PERFIL = {"silencioso": LILAS, "normal": ROXO, "jogo": VERMELHO}
+FUNDO, GRADE, CARTAO, BOTAO, BOTAO_ATIVO = "#04060c", "#0b1222", "#0a0f1c", "#0e1526", "#1f2c4a"
+TEXTO, SECUNDARIO, LINHA, DESCANSO_COR = "#e6f4ff", "#7d8ba3", "#1a2236", "#3a4560"
+CIANO, ROXO, MAGENTA, VERMELHO, LARANJA, AVISO = "#00e5ff", "#a259ff", "#ff2bd6", "#ff3355", "#ff8c1a", "#ffd000"
+COR_PERFIL = {"silencioso": CIANO, "normal": ROXO, "jogo": VERMELHO}
 FONTES = "/usr/local/share/fonts/painel/"  # Orbitron e Rajdhani (licença OFL), copiadas de google/fonts
 DIAS, MESES = ("SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"), "JAN FEV MAR ABR MAI JUN JUL AGO SET OUT NOV DEZ".split()
 
 
-def cor_nivel(v, limites=(70, 80)):
-    """Roxo (normal) → magenta → vermelho (quente)."""
+def cor_nivel(v, limites=(60, 70, 80)):
+    """Ciano (frio) → roxo → magenta → vermelho (quente)."""
     if v is None:
-        return ROXO
-    return next((c for c, lim in zip((ROXO, MAGENTA), limites) if v < lim), VERMELHO)
+        return CIANO
+    return next((c for c, lim in zip((CIANO, ROXO, MAGENTA), limites) if v < lim), VERMELHO)
 
 
 def mistura(a, b, k):
@@ -344,13 +344,13 @@ class Tela:
             for caixa, cor in molduras:
                 pts = [(x / 4, y / 4) for x, y in chanfro(caixa)]
                 b.line(pts + [pts[0]], fill=cor, width=2)
-            for x in range(LARGURA // 4):  # linha do topo, degradê roxo → magenta
-                b.point((x, (TOPO - 13) // 4), fill=mistura(MAGENTA, ROXO, x / (LARGURA / 4)))
+            for x in range(LARGURA // 4):  # linha do topo, degradê ciano → magenta
+                b.point((x, (TOPO - 13) // 4), fill=mistura(MAGENTA, CIANO, x / (LARGURA / 4)))
             brilho = brilho.filter(self.ImageFilter.GaussianBlur(3)).resize((LARGURA, ALTURA), self.Image.BILINEAR)
             img = self.ImageChops.add(img, brilho)
             d = self.ImageDraw.Draw(img)
             for x in range(0, LARGURA, 2):
-                d.line((x, TOPO - 13, x + 1, TOPO - 13), fill=mistura(MAGENTA, ROXO, x / LARGURA), width=2)
+                d.line((x, TOPO - 13, x + 1, TOPO - 13), fill=mistura(MAGENTA, CIANO, x / LARGURA), width=2)
             for caixa, cor in molduras:
                 pts = chanfro(caixa)
                 d.line(pts + [pts[0]], fill=cor, width=3)
@@ -365,7 +365,7 @@ class Tela:
         agora = time.localtime()
         data = "%s %02d %s" % (DIAS[agora.tm_wday], agora.tm_mday, MESES[agora.tm_mon - 1])
         x = MARGEM + 8 + d.textlength(hora, font=self.f["hora"]) + 34
-        self.texto(d, (x, TOPO // 2 - 2), data, "data", ROXO, "lm")
+        self.texto(d, (x, TOPO // 2 - 2), data, "data", CIANO, "lm")
 
     def botao(self, d, caixa, cor, ativo, apertado, c=22):
         """Botão chanfrado: o ativo ganha fundo tingido e borda dupla (brilho falso, sem borrar)."""
@@ -410,7 +410,7 @@ class Tela:
     def tocando(self, hora, dados, apertado, capa_grande):
         quadro_capa = (60, 600 - LADO_CAPA_GRANDE // 2, 60 + LADO_CAPA_GRANDE, 600 + LADO_CAPA_GRANDE // 2)
         midia = dados.get("midia")
-        img = self.fundo(((quadro_capa, ROXO),) if isinstance(midia, dict) else ())
+        img = self.fundo(((quadro_capa, CIANO),) if isinstance(midia, dict) else ())
         d = self.ImageDraw.Draw(img)
         self.topo(d, hora)
         if not isinstance(midia, dict):
@@ -422,7 +422,7 @@ class Tela:
             pts = chanfro(quadro_capa)  # corta os cantos da capa para seguir a moldura
             d.polygon([(quadro_capa[0], quadro_capa[1]), pts[0], pts[5]], fill=FUNDO)
             d.polygon([(quadro_capa[2], quadro_capa[3]), pts[2], pts[3]], fill=FUNDO)
-            d.line(pts + [pts[0]], fill=ROXO, width=3)
+            d.line(pts + [pts[0]], fill=CIANO, width=3)
         largura = LARGURA - MARGEM - 800
         self.texto(d, (800, 380), self.cortar(d, midia.get("titulo") or "", "grande_titulo", largura), "grande_titulo", TEXTO, "ls")
         artista = midia.get("artista") or ""
@@ -430,11 +430,11 @@ class Tela:
         if not tocando:
             artista = "PAUSADO" + (" · " + artista if artista else "")
         self.texto(d, (800, 404), self.cortar(d, artista, "grande_artista", largura), "grande_artista",
-                   ROXO if tocando else AVISO, "lt")
+                   CIANO if tocando else AVISO, "lt")
         agora = time.monotonic()
         for acao, caixa in botoes_tocando():
             principal = acao == "tocar"
-            self.botao(d, caixa, MAGENTA if principal else ROXO, principal, agora - apertado.get(acao, 0) < 0.3, 30)
+            self.botao(d, caixa, MAGENTA if principal else CIANO, principal, agora - apertado.get(acao, 0) < 0.3, 30)
             self.icone(d, acao, caixa)
         return img
     def bichinho(self, hora, dados, hist, carinho_em):
@@ -461,7 +461,7 @@ class Tela:
         x = LARGURA // 2 - (len(PAGINAS) * 52 - 12) // 2
         for i in range(len(PAGINAS)):
             d.polygon([(x + 6, ALTURA - 14), (x + 40, ALTURA - 14), (x + 34, ALTURA - 6), (x, ALTURA - 6)],
-                      fill=ROXO if i == pagina else LINHA)
+                      fill=CIANO if i == pagina else LINHA)
             x += 52
     def grafico(self, img, d, caixa, valores, cor, piso, rotulo, direita):
         x0, y0, x1, y1 = caixa
@@ -514,7 +514,7 @@ class Tela:
                      "máx %s °C (escala 20–100)" % (num(max(lidos)) if lidos else "—"))
     def cartao_barra(self, d, caixa, nome, valor, detalhe):
         x0, y0, x1, y1 = caixa
-        cor = cor_nivel(valor, (75, 90))
+        cor = cor_nivel(valor, (60, 75, 90))
         px0, px1 = x0 + 40, x1 - 36
         self.texto(d, (px0, y0 + 34), nome, "titulo", cor)
         self.texto(d, (px1, y0 + 18), num(valor) + "%", "valor_menor", TEXTO, "ra")
@@ -549,7 +549,7 @@ class Tela:
         c = cartoes()
         ram = pct(dados.get("ram_usada"), dados.get("ram_total"))
         img = self.fundo(((c["cpu"], cor_nivel(dados.get("cpu_temp"))), (c["gpu"], cor_nivel(dados.get("gpu_temp"))),
-                          (c["ram"], cor_nivel(ram, (75, 90))),
+                          (c["ram"], cor_nivel(ram, (60, 75, 90))),
                           (c["perfil"], COR_PERFIL.get(dados.get("perfil"), DESCANSO_COR))))
         d = self.ImageDraw.Draw(img)
         self.topo(d, hora)
