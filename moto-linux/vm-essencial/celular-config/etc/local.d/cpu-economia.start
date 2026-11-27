@@ -1,0 +1,5 @@
+#!/bin/sh
+# O sistema sobe com o processador travado no máximo ("performance"); "interactive" (o do Android) só acelera quando há trabalho.
+for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo interactive > "$g" 2>/dev/null; done
+# O degrau rápido vinha no máximo (1,65 GHz): qualquer redesenho do painel ia ao topo. 1,04 GHz basta.
+for c in 0 4; do echo 1036800 > /sys/devices/system/cpu/cpu$c/cpufreq/interactive/hispeed_freq 2>/dev/null; done

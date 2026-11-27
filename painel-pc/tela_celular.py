@@ -23,7 +23,7 @@ STRIDE_PX = 1088  # linha do framebuffer tem 4352 bytes (1088 px), não 1080
 ROTACAO = "/var/lib/tela-painel/rotacao"  # "1" = girada 180°; toque no relógio alterna
 DESCANSO_APOS = 30  # segundos sem dados do PC
 PONTOS = 300  # 5 min com um envio por segundo
-BRILHO, BRILHO_DESCANSO = 255, 12
+BRILHO, BRILHO_DESCANSO = 160, 12  # 255 esquenta o celular sem ganho visível em ambiente interno
 LUZ = "/sys/class/leds/lcd-backlight/brightness"
 TOQUE = "/dev/input/event2"  # synaptics_dsx_i2c
 GB = 1024 ** 3
