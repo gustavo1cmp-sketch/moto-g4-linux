@@ -1,0 +1,54 @@
+[19:42:25] (native) flash rootfs image[0m
+[19:42:27] (native) install android-tools-avbtool android-tools-fastboot android-tools-mkbootimg[0m
+(bootloader) is-userspace: not found
+(bootloader) has-slot:userdata: not found
+(bootloader) is-logical:userdata: not found
+(bootloader) is-logical:userdata: not found
+Warning: skip copying userdata image avb footer due to sparse image.
+Sending sparse 'userdata' 1/2 (523831 KB)          OKAY [ 17.634s]
+Writing 'userdata'                                 (bootloader) flash permission denied
+FAILED (remote: '')
+fastboot: error: Command failed
+[19:42:49] [94mNOTE:[0m The failed command's output is above the ^^^ line in the log file: /home/dev/.local/var/pmbootstrap/log.txt[0m
+[19:42:49] [91mERROR:[0m Command failed (exit code 1): (native) % fastboot flash userdata /home/pmos/rootfs/motorola-athene.img[0m
+[19:42:49] See also: <https://postmarketos.org/troubleshooting>[0m
+
+Run 'pmbootstrap log' for details.
+
+Before you report this error, ensure that pmbootstrap is up to date.
+Find the latest version here: https://gitlab.postmarketos.org/postmarketOS/pmbootstrap/-/tags
+Your version: 3.12.1
+[92mChannel[0m: edge (pmaports: main, dirty)
+[92mDevice[0m:  motorola-athene (aarch64)
+[92mUI[0m:      console
+[92msystemd[0m: no (openrc selected in pmbootstrap init)
+[19:42:52] (rootfs_motorola-athene) install device-motorola-athene[0m
+[19:42:54] (rootfs_motorola-athene) install postmarketos-mkinitfs[0m
+[19:42:54] (rootfs_motorola-athene) mkinitfs[0m
+[19:43:01] INFO: config-motorola-athene.aarch64 has suboptimal configuration (category:default), run 'pmbootstrap kconfig check' for details![0m
+[19:43:01] [93mWARNING:[0m config-motorola-athene.aarch64 isn't configured properly (category:default), run 'pmbootstrap kconfig check' for details![0m
+[19:43:01] (native) flash kernel motorola-athene[0m
+[19:43:02] (native) install android-tools-avbtool android-tools-fastboot android-tools-mkbootimg[0m
+(bootloader) is-userspace: not found
+(bootloader) has-slot:boot: not found
+(bootloader) is-logical:boot: not found
+(bootloader) is-logical:boot: not found
+Warning: skip copying boot image avb footer (boot partition size: 16777216, boot image size: 31051776).
+Sending 'boot' (30324 KB)                          OKAY [  0.957s]
+Writing 'boot'                                     (bootloader) Image size exeeded partition limits
+(bootloader) Preflash validation failed
+FAILED (remote: '')
+fastboot: error: Command failed
+[19:43:04] [94mNOTE:[0m The failed command's output is above the ^^^ line in the log file: /home/dev/.local/var/pmbootstrap/log.txt[0m
+[19:43:04] [91mERROR:[0m Command failed (exit code 1): (native) % fastboot flash boot /mnt/rootfs_motorola-athene/boot/boot.img[0m
+[19:43:04] See also: <https://postmarketos.org/troubleshooting>[0m
+
+Run 'pmbootstrap log' for details.
+
+Before you report this error, ensure that pmbootstrap is up to date.
+Find the latest version here: https://gitlab.postmarketos.org/postmarketOS/pmbootstrap/-/tags
+Your version: 3.12.1
+[92mChannel[0m: edge (pmaports: main, dirty)
+[92mDevice[0m:  motorola-athene (aarch64)
+[92mUI[0m:      console
+[92msystemd[0m: no (openrc selected in pmbootstrap init)

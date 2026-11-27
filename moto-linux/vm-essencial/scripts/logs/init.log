@@ -1,0 +1,57 @@
+[17:08:11] Location of the 'work' path. Multiple chroots (native, device arch, device rootfs) will be created in there.[0m
+[17:08:11] [1mWork path [/home/dev/.local/var/pmbootstrap][0m: [17:08:11] Location of the 'pmaports' path, containing package definitions.[0m
+[17:08:11] [1mpmaports path [/home/dev/pmaports][0m: [17:08:11] Choose the postmarketOS release channel.[0m
+[17:08:11] Available (14):[0m
+[17:08:11] * edge: Rolling release / Most devices / Occasional breakage: https://nura.eco/edge[0m
+[17:08:11] * v26.06: Latest release / Recommended for best stability[0m
+[17:08:11] * v25.12: Old release (unsupported)[0m
+[17:08:11] [1mChannel [edge][0m: [17:08:11] [94mNOTE:[0m pmaports is on main branch, copying git hooks.[0m
+[17:08:11] Choose your target device vendor (either an existing one, or a new one for porting).[0m
+[17:08:11] Available vendors (108): acer, alcatel, amazon, amediatech, amlogic, apple, ark, arrow, asus, ayaneo, ayn, bananapi, barnesnoble, beelink, blackberry, bq, clockworkpi, cubietech, cutiepi, dell, dongshanpi, epson, essential, fairphone, finepower, fly, fxtec, generic, gigaset, goclever, google, gp, hisense, hp, htc, huawei, inet, infocus, jolla, khadas, klipad, kobo, lark, leeco, lenovo, lg, librecomputer, linksys, lynx, mangopi, medion, meizu, microsoft, mnt, mobvoi, motorola, nextbit, nobby, nokia, nothing, nvidia, odroid, oneplus, oppo, ouya, pine64, planet, pocketbook, postmarketos, powkiddy, purism, qcom, qemu, qualcomm, radxa, raspberry, realme, rockchip, samsung, semc, sharp, shift, sipeed, solidrun, sony, sourceparts, sqfmi, starway, surftab, t2m, thundercomm, tokio, tolino, trekstor, vernee, vivo, volla, vsmart, wd, wexler, wiko, wileyfox, xiaomi, xunlong, yu, zhihe, zte, zuk[0m
+[17:08:11] [1mVendor [motorola][0m: [17:08:11] Devices are categorised as follows, from best to worst:
+* [95mMain[0m: ports where mostly everything works.
+* [94mCommunity[0m: often mostly usable, but may lack important functionality.
+* [92mTesting[0m: anything from "just boots in some sense" to almost fully functioning ports.
+* [93mDownstream[0m: ports that use a downstream kernel — very limited functionality. Not recommended.
+
+Available devices by codename (1): [92mdubai[0m (testing)[0m
+[17:08:11] [1mDevice codename [athene][0m: [17:08:11] [93mWARNING:[0m motorola-athene is archived: unmaintained[0m
+[17:08:11] [1mContinue? (y/n) [n][0m: [17:08:11] [1mUsername [user][0m: [17:08:12] Available providers for postmarketos-base-ui-audio-backend (2):[0m
+[17:08:12] * pulseaudio: Use pulseaudio as the audio backend. [1m(default)[0m[0m
+[17:08:12] * pipewire: Use pipewire as the audio backend. (but may not work with all devices)[0m
+[17:08:12] [1mProvider [default][0m: [17:08:12] Available providers for postmarketos-base-ui-wifi (2):[0m
+[17:08:12] * wpa_supplicant: Use wpa_supplicant as the WiFi backend. [1m(default)[0m[0m
+[17:08:12] * iwd: Use iwd as the WiFi backend (but may not work with all devices)[0m
+[17:08:12] [1mProvider [default][0m: [17:08:12] Available providers for postmarketos-usb-moded-default-profile (2):[0m
+[17:08:12] * developer: Make 'developer mode' the default usb-moded profile (always enables usb networking) [1m(default)[0m[0m
+[17:08:12] * charging: Make 'charging mode' the default usb-moded profile (usb networking must be manually enabled)[0m
+[17:08:12] [1mProvider [default][0m: [17:08:12] Available user interfaces (16): [0m
+[17:08:12] * none: Bare minimum OS image for testing and manual customization. The "console" UI should be selected if a graphical UI is not desired.[0m
+[17:08:12] * buffyboard: Plain framebuffer console with modern touchscreen keyboard support[0m
+[17:08:12] * console: Console environment, with no graphical/touch UI[0m
+[17:08:12] * fbkeyboard: Plain framebuffer console with touchscreen keyboard support[0m
+[17:08:12] * gnome: (Wayland) Gnome Shell[0m
+[17:08:12] * gnome-mobile: (Wayland) Gnome Shell patched to adapt better to phones (Experimental)[0m
+[17:08:12] * i3wm: (X11) Tiling WM (keyboard required)[0m
+[17:08:12] * lxqt: (X11) Lightweight Qt Desktop Environment (stylus recommended)[0m
+[17:08:12] * mate: (X11) MATE Desktop Environment, fork of GNOME2 (stylus recommended)[0m
+[17:08:12] * openbox: (X11) A highly configurable and lightweight X11 window manager (keyboard required)[0m
+[17:08:12] * os-installer: UI for installing postmarketOS[0m
+[17:08:12] * plasma-bigscreen: (Wayland) 10-feet variant of Plasma, made for big screen TVs[0m
+[17:08:12] * plasma-desktop: (Wayland) KDE Desktop Environment (works well with tablets)[0m
+[17:08:12] * sxmo-de-dwm: Simple Mobile: Mobile environment based on SXMO and running on dwm[0m
+[17:08:12] * sxmo-de-i3: Simple Mobile: Mobile environment based on SXMO and running on i3[0m
+[17:08:12] * windowmaker: (X11) Window manager inspired by the NeXTSTEP user interface (stylus recommended)[0m
+[17:08:12] * xfce4: (X11) Lightweight desktop (stylus recommended)[0m
+[17:08:12] [94mNOTE:[0m 14 UIs are hidden because "deviceinfo_drm" is not set (see https://postmarketos.org/deviceinfo).[0m
+[17:08:12] [1mUser interface [console][0m: [17:08:12] [93mWARNING:[0m Kernel version 3.10.108 is lower than systemd's minimal requirement (5.4). Choosing systemd may result in non-bootable system. Get more information for systemd requirements at https://github.com/systemd/systemd/blob/main/README[0m
+[17:08:12] Based on your UI selection, 'default' will result in choosing systemd.[0m
+[17:08:12] [1mWhich service manager should be used? (default/openrc/systemd) [default][0m: [17:08:12] Additional options: extra free space: 0 MB, boot partition size: 512 MB, parallel jobs: 4, ccache per arch: 5G, sudo timer: False, mirror: http://mirror.postmarketos.org/postmarketos/[0m
+[17:08:12] [1mChange them? (y/n) [n][0m: [17:08:12] Additional packages that will be installed to rootfs. Specify them in a comma separated list (e.g.: vim,file) or "none"[0m
+[17:08:12] [1mExtra packages [none][0m: [17:08:12] Your host timezone: Etc/UTC[0m
+[17:08:12] [1mUse this timezone instead of GMT? (y/n) [y][0m: [17:08:12] [93mWARNING:[0m Unable to determine timezone configuration on host, using GMT.[0m
+[17:08:12] Choose your preferred locale, like e.g. en_US. Only UTF-8 is supported, it gets appended automatically. Use tab-completion if needed.[0m
+[17:08:12] [1mLocale [pt_BR][0m: [17:08:12] [1mDevice hostname (short form, e.g. 'foo') [moto-g4][0m: [17:08:12] [94mNOTE:[0m No SSH public keys found to copy to the device.[0m
+[17:08:12] See https://postmarketos.org/ssh-key-glob for more information.[0m
+[17:08:12] After pmaports are changed, the binary packages may be outdated. If you want to install postmarketOS without changes, reply 'n' for a faster installation.[0m
+[17:08:12] [1mBuild outdated packages during 'pmbootstrap install'? (y/n) [y][0m: [17:08:12] [1mZap existing chroots to apply configuration? (y/n) [y][0m: [17:08:12] [92mDONE![0m[0m

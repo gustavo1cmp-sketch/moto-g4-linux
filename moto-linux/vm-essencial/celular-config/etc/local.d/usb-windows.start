@@ -1,0 +1,11 @@
+#!/bin/sh
+# Classe RNDIS "wireless" (E0/01/03): o Windows instala o driver sozinho.
+A=/sys/class/android_usb/android0
+if [ "$(cat $A/f_rndis/wceis)" != 1 ]; then
+  echo 0 > $A/enable; echo 1 > $A/f_rndis/wceis; echo 1 > $A/enable
+fi
+sleep 2
+ip addr show rndis0 | grep -q 172.16.42.1 || ip addr add 172.16.42.1/16 dev rndis0
+ip link set rndis0 up
+# O DHCP precisa subir depois da troca acima, senão fica preso à conexão USB antiga.
+rc-service unudhcpd.rndis0 restart

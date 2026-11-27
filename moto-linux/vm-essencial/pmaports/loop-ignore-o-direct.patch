@@ -1,0 +1,32 @@
+--- a/drivers/block/loop.c	2026-11-26 20:49:20.450251265 +0000
++++ b/drivers/block/loop.c	2026-11-26 20:49:29.085970757 +0000
+@@ -656,6 +656,14 @@
+ 	if (!file)
+ 		goto out;
+ 
++	/*
++	 * losetup --direct-io=on abre o arquivo com O_DIRECT em kernels sem
++	 * LOOP_SET_DIRECT_IO; aqui isso derruba a escrita (get_user_pages_fast sem mm).
++	 */
++	spin_lock(&file->f_lock);
++	file->f_flags &= ~O_DIRECT;
++	spin_unlock(&file->f_lock);
++
+ 	inode = file->f_mapping->host;
+ 	old_file = lo->lo_backing_file;
+ 
+@@ -838,6 +846,14 @@
+ 	if (!file)
+ 		goto out;
+ 
++	/*
++	 * losetup --direct-io=on abre o arquivo com O_DIRECT em kernels sem
++	 * LOOP_SET_DIRECT_IO; aqui isso derruba a escrita (get_user_pages_fast sem mm).
++	 */
++	spin_lock(&file->f_lock);
++	file->f_flags &= ~O_DIRECT;
++	spin_unlock(&file->f_lock);
++
+ 	error = -EBUSY;
+ 	if (lo->lo_state != Lo_unbound)
+ 		goto out_putf;

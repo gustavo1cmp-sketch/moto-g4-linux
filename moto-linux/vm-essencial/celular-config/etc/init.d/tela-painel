@@ -1,0 +1,15 @@
+#!/sbin/openrc-run
+description="Painel do PC na tela do celular"
+command=/usr/bin/python3
+command_args="/usr/local/bin/tela_celular.py"
+command_background=true
+pidfile=/run/tela-painel.pid
+output_log=/var/log/tela-painel.log
+error_log=/var/log/tela-painel.log
+depend() {
+	after local plymouth
+}
+start_pre() {
+	plymouth quit 2>/dev/null
+	return 0
+}

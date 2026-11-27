@@ -1,0 +1,8 @@
+network:
+  version: 2
+  ethernets:
+    celular:
+      match:
+        driver: rndis_host
+      addresses: [172.16.42.2/24]
+      optional: true

@@ -1,0 +1,11 @@
+ctrl_interface=/run/wpa_supplicant_casa
+network={
+ ssid="SUA_REDE_2G"
+ psk="SUA_SENHA_AQUI"
+ priority=2
+}
+network={
+ ssid="SUA_REDE_5G"
+ psk="SUA_SENHA_AQUI"
+ priority=1
+}

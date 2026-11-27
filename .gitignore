@@ -1,0 +1,7 @@
+# Senha do Wi-Fi: no repositório vai só casa.conf.exemplo
+**/wpa_supplicant/casa.conf
+# Logs de pane do kernel (pstore) e downloads públicos
+moto-linux/pstore-*/
+moto-linux/download/
+__pycache__/
+*.pyc

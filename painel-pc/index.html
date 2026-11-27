@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d1117">
+<title>Painel do PC</title>
+<style>
+  /* O Chrome 69 do celular não suporta gap em flexbox: usar grid. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #0d1117; color: #e6edf3; font-family: Roboto, sans-serif; }
+  body { display: flex; flex-direction: column; padding: 2vmin; }
+  header { display: grid; grid-template-columns: auto 1fr auto; grid-gap: 2vmin; align-items: center; padding: 0 1vmin 2vmin; }
+  #hora { font-size: 8vmin; font-weight: 300; }
+  #aviso { font-size: 3.5vmin; color: #f0b429; text-align: center; }
+  nav { display: grid; grid-template-columns: repeat(6, 15vmin); grid-gap: 1.5vmin; }
+  button { height: 14vmin; border: 0; border-radius: 2vmin; background: #21262d; color: #e6edf3; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  button:active { background: #3d444d; }
+  button:focus-visible { outline: 2px solid #3987e5; }
+  button svg { width: 7vmin; height: 7vmin; fill: currentColor; vertical-align: middle; }
+  main { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 3fr 2fr; grid-gap: 2vmin; min-height: 0; }
+  @media (orientation: portrait) {
+    header { grid-template-columns: auto 1fr; }
+    nav { grid-column: 1 / -1; grid-template-columns: repeat(6, 1fr); }
+    main { grid-template-columns: 1fr; grid-template-rows: 3fr 3fr 2fr 2fr; }
+  }
+  section { background: #161b22; border-radius: 2vmin; padding: 2.5vmin 3vmin; display: flex; flex-direction: column; justify-content: space-between; min-height: 0; }
+  h2 { font-size: 4.5vmin; font-weight: 500; color: #9da7b3; }
+  .topo { display: flex; justify-content: space-between; align-items: center; }
+  .valor { font-size: 10vmin; font-weight: 300; line-height: 1; }
+  .menor .valor { font-size: 8vmin; }
+  .detalhe { font-size: 3.8vmin; color: #9da7b3; }
+  .quente { color: #ff7b72; font-weight: 700; }
+  .barra { height: 2vmin; background: #30363d; border-radius: 1vmin; overflow: hidden; }
+  .barra i { display: block; height: 100%; width: 0; background: #3987e5; transition: width .5s; }
+  /* Um gráfico por medida: % e °C não dividem o mesmo eixo. */
+  .grafico { flex: 1; display: flex; flex-direction: column; min-height: 0; margin-top: 1vmin; }
+  .grafico p { display: flex; justify-content: space-between; font-size: 3vmin; color: #9da7b3; }
+  .grafico div { flex: 1; position: relative; border-bottom: 1px solid #30363d; min-height: 0; }
+  .grafico svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .grafico polyline { fill: none; stroke: #3987e5; stroke-width: 2px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .grafico.temp polyline { stroke: #d95926; }
+  /* Descanso: PC desligado ou sem resposta. */
+  #descanso { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #59616b; }
+  #descanso[hidden] { display: none; }
+  #descanso b { font-size: 28vmin; font-weight: 100; }
+  #descanso span { font-size: 4vmin; }
+</style>
+</head>
+<body>
+<header>
+  <div id="hora">--:--</div>
+  <div id="aviso" role="status">Conectando…</div>
+  <nav aria-label="Controles de mídia">
+    <button data-acao="anterior" aria-label="Faixa anterior"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+    <button data-acao="tocar" aria-label="Tocar ou pausar"><svg viewBox="0 0 24 24"><path d="M3 5v14l10-7zM15 5h2.5v14H15zm4.5 0H22v14h-2.5z"/></svg></button>
+    <button data-acao="proxima" aria-label="Próxima faixa"><svg viewBox="0 0 24 24"><path d="m6 18 8.5-6L6 6zM16 6v12h2V6z"/></svg></button>
+    <button data-acao="volume-menos" aria-label="Diminuir volume"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9zm12 2h7v2h-7z"/></svg></button>
+    <button data-acao="mudo" aria-label="Ligar ou desligar o som"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9zm12.4 0L14 10.4l1.6 1.6-1.6 1.6 1.4 1.4 1.6-1.6 1.6 1.6 1.4-1.4-1.6-1.6 1.6-1.6L18.600 9 17 10.600z"/></svg></button>
+    <button data-acao="volume-mais" aria-label="Aumentar volume"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9zm12 2h2.500V8.500h2V11H22v2h-2.500v2.500h-2V13H15z"/></svg></button>
+  </nav>
+</header>
+<main>
+  <section>
+    <div class="topo"><h2>CPU</h2><div class="valor" id="cpu">—</div></div>
+    <div class="detalhe" id="cpu-det">—</div>
+    <div class="grafico"><p><span>Uso, 5 min</span><span>0–100%</span></p><div><svg viewBox="0 0 149 100" preserveAspectRatio="none" role="img" aria-label="Histórico de uso da CPU"><polyline id="g-cpu"/></svg></div></div>
+    <div class="grafico temp"><p><span>Temperatura</span><span id="max-cpu_temp">—</span></p><div><svg viewBox="0 0 149 100" preserveAspectRatio="none" role="img" aria-label="Histórico de temperatura da CPU"><polyline id="g-cpu_temp"/></svg></div></div>
+  </section>
+  <section>
+    <div class="topo"><h2>GPU</h2><div class="valor" id="gpu">—</div></div>
+    <div class="detalhe" id="gpu-det">—</div>
+    <div class="grafico"><p><span>Uso, 5 min</span><span>0–100%</span></p><div><svg viewBox="0 0 149 100" preserveAspectRatio="none" role="img" aria-label="Histórico de uso da GPU"><polyline id="g-gpu"/></svg></div></div>
+    <div class="grafico temp"><p><span>Temperatura</span><span id="max-gpu_temp">—</span></p><div><svg viewBox="0 0 149 100" preserveAspectRatio="none" role="img" aria-label="Histórico de temperatura da GPU"><polyline id="g-gpu_temp"/></svg></div></div>
+  </section>
+  <section class="menor"><h2>RAM</h2><div class="valor" id="ram">—</div><div class="detalhe" id="ram-det">—</div><div class="barra"><i id="ram-bar"></i></div></section>
+  <section class="menor"><h2>Disco C:</h2><div class="valor" id="disco">—</div><div class="detalhe" id="disco-det">—</div><div class="barra"><i id="disco-bar"></i></div></section>
+</main>
+<div id="descanso" hidden><b id="hora-descanso">--:--</b><span>PC sem resposta</span></div>
+<script>
+  var GB = 1073741824;
+  var PONTOS = 150;          // 150 leituras de 2 s = 5 minutos
+  var DESCANSO_APOS = 30000; // ms sem resposta do PC
+  var SERIES = ['cpu', 'cpu_temp', 'gpu', 'gpu_temp'];
+  var historico = {};
+  var ultimaResposta = Date.now();
+
+  function el(id) { return document.getElementById(id); }
+  function num(v, casas) {
+    return v === null ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: casas || 0, maximumFractionDigits: casas || 0 });
+  }
+  function mostrar(id, porcento, detalhe) {
+    el(id).textContent = num(porcento) + '%';
+    el(id + '-det').innerHTML = detalhe;
+    if (el(id + '-bar')) el(id + '-bar').style.width = (porcento || 0) + '%';
+  }
+  function temp(v) {
+    if (v === null) return '— °C';
+    return v >= 80 ? '<span class="quente">' + num(v) + ' °C (alta)</span>' : num(v) + ' °C';
+  }
+  function limparHistorico() {
+    SERIES.forEach(function (s) { historico[s] = []; });
+  }
+  function desenhar(serie, valor) {
+    var h = historico[serie];
+    h.push(valor);
+    if (h.length > PONTOS) h.shift();
+    var ehTemp = serie.indexOf('_temp') > 0;
+    var piso = ehTemp ? 20 : 0; // temperatura: escala fixa de 20 a 100 °C
+    var pontos = [];
+    h.forEach(function (v, i) {
+      if (v === null) return;
+      var y = 100 - 100 * (Math.min(Math.max(v, piso), 100) - piso) / (100 - piso);
+      pontos.push((PONTOS - h.length + i) + ',' + y.toFixed(1));
+    });
+    el('g-' + serie).setAttribute('points', pontos.join(' '));
+    if (ehTemp) {
+      var lidos = h.filter(function (v) { return v !== null; });
+      el('max-' + serie).textContent = 'máx ' + (lidos.length ? num(Math.max.apply(null, lidos)) : '—') + ' °C (escala 20–100)';
+    }
+  }
+  function atualizar(d) {
+    mostrar('cpu', d.cpu, temp(d.cpu_temp) + ' · ' + num(d.cpu_watts) + ' W');
+    var vram = d.vram_mb === null ? '—' : num(d.vram_mb / 1024, 1);
+    if (d.vram_total_mb) vram += ' / ' + num(d.vram_total_mb / 1024, 1);
+    mostrar('gpu', d.gpu, temp(d.gpu_temp) + ' · ' + num(d.gpu_watts) + ' W · fan ' + num(d.gpu_fan) + '% · VRAM ' + vram + ' GB');
+    mostrar('ram', 100 * d.ram_usada / d.ram_total, num(d.ram_usada / GB, 1) + ' de ' + num(d.ram_total / GB, 1) + ' GB');
+    mostrar('disco', 100 * d.disco_usado / d.disco_total, num((d.disco_total - d.disco_usado) / GB) + ' GB livres');
+    SERIES.forEach(function (s) { desenhar(s, d[s]); });
+    el('aviso').textContent = d.afterburner ? '' : 'Abra o MSI Afterburner para ver CPU e GPU';
+  }
+  function respondeu(d) {
+    // Voltando do descanso, o histórico antigo não é mais contínuo.
+    if (!el('descanso').hidden) limparHistorico();
+    ultimaResposta = Date.now();
+    el('descanso').hidden = true;
+    atualizar(d);
+  }
+  function ciclo() {
+    // Escondido não pede dados: é pela falta de pedidos que o PC sabe que deve reabrir o painel.
+    if (document.hidden) {
+      ultimaResposta = Date.now();
+      return setTimeout(ciclo, 2000);
+    }
+    var hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    el('hora').textContent = el('hora-descanso').textContent = hora;
+    if (Date.now() - ultimaResposta > DESCANSO_APOS) el('descanso').hidden = false;
+    var pedido = new XMLHttpRequest();
+    pedido.open('GET', '/dados');
+    pedido.timeout = 5000;
+    pedido.onload = function () { if (pedido.status === 200) respondeu(JSON.parse(pedido.responseText)); };
+    pedido.onerror = pedido.ontimeout = function () { el('aviso').textContent = 'Sem conexão com o PC'; };
+    pedido.onloadend = function () { setTimeout(ciclo, 2000); };
+    pedido.send();
+  }
+  function comandar(acao) {
+    var pedido = new XMLHttpRequest();
+    pedido.open('POST', '/midia/' + acao);
+    pedido.setRequestHeader('X-Painel', '1');
+    pedido.timeout = 3000;
+    pedido.onloadend = function () { if (pedido.status !== 204) el('aviso').textContent = 'Comando não enviado'; };
+    pedido.send();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('button[data-acao]'), function (botao) {
+    botao.addEventListener('click', function () {
+      comandar(botao.getAttribute('data-acao'));
+      botao.blur(); // no toque, o Chrome 69 deixaria o contorno de foco preso
+    });
+  });
+  document.addEventListener('click', function () {
+    var raiz = document.documentElement;
+    if (document.fullscreenElement || document.webkitFullscreenElement) return;
+    (raiz.requestFullscreen || raiz.webkitRequestFullscreen).call(raiz);
+  });
+  limparHistorico();
+  ciclo();
+</script>
+</body>
+</html>

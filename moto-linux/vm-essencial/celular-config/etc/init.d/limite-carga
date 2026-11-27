@@ -1,0 +1,5 @@
+#!/sbin/openrc-run
+description="Mantém a bateria entre 55% e 60%"
+command=/usr/local/bin/limite_carga.sh
+command_background=true
+pidfile=/run/limite-carga.pid

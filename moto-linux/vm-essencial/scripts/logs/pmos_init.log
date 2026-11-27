@@ -1,0 +1,29 @@
+ˇ˚ˇ˚ˇ˝postmarketOS debug shell
+https://postmarketos.org/debug-shell
+
+  Device: Motorola Moto G4 (motorola-athene)
+  Kernel: 3.10.108-Frostbitten-R19-64Bitch
+  OS ver: edge
+  initrd: 3.12.7-r0
+
+Run 'pmos_continue_boot' to continue booting.
+Read the initramfs log with 'cat /pmOS_init.log'.
+~ # [6ncat /pmOS_init.log
+tee: /dev/: Is a directory
+  ‚ù¨‚ù¨ PMOS STAGE 1 ‚ù≠‚ù≠
+initramfs version: 3.12.7-r0
+  ‚ù¨‚ù¨ PMOS STAGE 2 ‚ù≠‚ù≠
+cat: can't open '/sys/kernel/config/usb_gadget/g1/UDC': No such file or directory
+Trying to start server with parameters: Server IP addr: 172.16.42.1:67, client IP addr: 172.16.42.2, interface: rndis0
+Entering debug shell
+cat: can't open '/sys/kernel/config/usb_gadget/g1/UDC': No such file or directory
+/usr/bin/buffyboard
+modprobe: FATAL: Module uinput not found in directory /lib/modules/3.10.108-Frostbitten-R19-64Bitch
+Ignoring invalid config file /usr/share/buffyboard/buffyboard.conf
+Ignoring invalid config file /etc/buffyboard.conf
+/init_2nd.sh: line 822: can't open /sys/kernel/config/usb_gadget/g1/UDC: no such file
+ash: out of range
+/init_2nd.sh: line 827: can't create /sys/kernel/config/usb_gadget/g1/UDC: nonexistent directory
+  Couldn't write new UDC
+Could not set up uinput device
+~ # [6n

@@ -1,0 +1,16 @@
+#!/sbin/openrc-run
+description="Liga o som: DSP de áudio (ADSP) e caminho até o alto-falante (amplificador CS35L34)"
+depend() {
+	after local
+}
+start() {
+	ebegin "Ligando o som"
+	# O ADSP só sobe com o firmware adsp.* (copiado da partição modem) e a placa de som espera por ele.
+	[ "$(cat /sys/bus/msm_subsys/devices/subsys1/state)" = ONLINE ] || echo 1 > /sys/kernel/boot_adsp/boot
+	for i in $(seq 30); do grep -q cs35l34 /proc/asound/cards && break; sleep 1; done
+	# Mesmo caminho do mixer_paths.xml do Android ("deep-buffer-playback speaker").
+	amixer -c0 -q cset name="QUIN_MI2S_RX Audio Mixer MultiMedia1" 1 && \
+	amixer -c0 -q cset name="AMP Gain" "${AMP_GAIN:-15dB}"
+	local r=$?; /usr/local/bin/volume "${VOLUME:-60}" >/dev/null 2>&1
+	eend $r
+}

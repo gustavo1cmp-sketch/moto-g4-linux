@@ -1,0 +1,6 @@
+pagesize = 0x800
+kerneladdr = 0x80008000
+ramdiskaddr = 0x81000000
+secondaddr = 0x80f00000
+tagsaddr = 0x80000100
+cmdline = quiet splash plymouth.ignore-serial-consoles plymouth.prefer-fbcon console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 androidboot.hardware=qcom msm_rtb.filter=0x237 ehci-hcd.park=3 androidboot.bootdevice=7824900.sdhci lpm_levels.sleep_disabled=1 earlyprintk buildvariant=userdebug pmos_boot_uuid=66774099-cabd-4991-8ff6-6799a798b020 pmos_root_uuid=a4a3d95a-c0a6-454c-9d44-04c7ccb4cc1d pmos_rootfsopts=defaults

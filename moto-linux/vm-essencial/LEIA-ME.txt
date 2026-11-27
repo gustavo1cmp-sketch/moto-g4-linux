@@ -1,0 +1,21 @@
+O essencial da VM pmos-build (postmarketOS do Moto G4 Plus / athene), salvo em 26/11/2026.
+Com isto dá para recriar a VM e recompilar, ou reinstalar sem recompilar.
+
+pmbootstrap_v3.cfg        configuração do pmbootstrap (vai em ~/.config/ numa VM nova)
+60-celular.yaml           rede USB da VM com o celular (vai em /etc/netplan/)
+pmaports/                 nossas correções sobre o pmaports (aplicar com: git apply correcoes-athene.patch)
+                          commit-base.txt / pmbootstrap-commit.txt = versões usadas
+pacotes-compilados/       kernel e pacote do aparelho já compilados (evitam recompilar o kernel)
+boot-partes/              peças do boot gravado: kernel (vmlinuz), initramfs, dt-moto.img (formato Motorola)
+dtbtool/                  dtbtool da LineageOS (gera o dt.img: --force-v3 --motorola 1)
+scripts/                  compilar.sh, recompilar.sh, instalar.sh e os logs da instalação
+celular-config/           arquivos que configuramos no celular (serviços, som, Wi-Fi, painel)
+                          ATENÇÃO: etc/wpa_supplicant/casa.conf tem a senha do Wi-Fi
+
+Também importantes, fora desta pasta:
+  ..\pmos-boot-gravado.img   boot que está gravado no celular
+  ..\conectar-pmos.cmd       SSH no celular
+
+Para recompilar numa VM nova: Ubuntu 24.04 + git clone pmbootstrap e pmaports nos commits acima,
+git apply das correções, copiar o pmbootstrap_v3.cfg, depois scripts/recompilar.sh.
+Cuidado: "pmbootstrap install" gera UUIDs novos; o boot precisa ser montado de novo (ver logs) e o rootfs regravado.

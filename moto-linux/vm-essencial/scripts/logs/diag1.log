@@ -1,0 +1,14 @@
+ÿûÿûÿýpostmarketOS debug shell
+https://postmarketos.org/debug-shell
+
+  Device: Motorola Moto G4 (motorola-athene)
+  Kernel: 3.10.108-Frostbitten-R19-64Bitch
+  OS ver: edge
+  initrd: 3.12.7-r0
+
+Run 'pmos_continue_boot' to continue booting.
+Read the initramfs log with 'cat /pmOS_init.log'.
+~ # [6nls /dev/loop0* /dev/mapper 2>&1 | tr "\n" " "; echo
+/dev/loop0 /dev/loop0p1 /dev/loop0p2  /dev/mapper: control 
+~ # mkdir -p /r; mount -t ext4 /dev/loop0p2 /r && echo ROOT-MONTADO; df -h /r | 
+tail -n1

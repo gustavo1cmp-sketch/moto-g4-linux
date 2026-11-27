@@ -1,0 +1,6 @@
+#!/bin/sh
+# Uso: volume 0-100   (sem número, mostra o atual)
+# O controle "Master" só nasce quando a saída padrão é aberta pela primeira vez.
+amixer -c0 cget name=Master >/dev/null 2>&1 || aplay -q -d 1 -t raw -f S16_LE -r 48000 -c 2 /dev/zero
+if [ -n "$1" ]; then amixer -c0 -q cset name=Master "$1%"; fi
+amixer -c0 cget name=Master | sed -n "s/.*: values=\([0-9]*\),.*/\1/p" | awk "{printf \"volume: %d%%\n\", \$1*100/255+0.5}"

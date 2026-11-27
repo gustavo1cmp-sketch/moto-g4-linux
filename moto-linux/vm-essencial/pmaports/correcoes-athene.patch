@@ -1,0 +1,83 @@
+diff --git a/device/archived/device-motorola-athene/APKBUILD b/device/archived/device-motorola-athene/APKBUILD
+index 4d7cff48d8..ba3bab2a8a 100644
+--- a/device/archived/device-motorola-athene/APKBUILD
++++ b/device/archived/device-motorola-athene/APKBUILD
+@@ -22,7 +22,7 @@ package() {
+ }
+ 
+ sha512sums="
+-75db207454bb240906de4c8c99fd57df608a04020dcbd4a7c4c58f4d06e432744a849bf85d28b2efea999a4792a4447536d2aacf0aea9ceb89994e598fa80258  deviceinfo
++284e3d43215f688755f8732ac9df94a95531bb74784ba00aa9f4bb4bcd36c5c55573f9c74e37748fa857ecba7203faaa1eae54681a1608bebf51a350e51b96f4  deviceinfo
+ a212e5946d6febf7ae029cbff161392662d35f14b20490a02da6ae35dfcf51bc7374b3f7eaa5ec4eb3637b84ad044ec884c42aacbd2ee8e6b6aad9e79e32f470  kernel-cmdline.conf
+ c6764223c9c19a71a8bcbf86bf738a13ed01e318cd8b5ad7aa521f27cc85d78f469d92f5725767fe507ef6338f20dbc107ed3fc5811e465c8335df57437d877e  initfs-hook.sh
+ "
+diff --git a/device/archived/device-motorola-athene/deviceinfo b/device/archived/device-motorola-athene/deviceinfo
+index 07c5d88344..22282c0679 100644
+--- a/device/archived/device-motorola-athene/deviceinfo
++++ b/device/archived/device-motorola-athene/deviceinfo
+@@ -27,3 +27,8 @@ deviceinfo_flash_offset_tags="0x00000100"
+ deviceinfo_flash_pagesize="2048"
+ deviceinfo_flash_sparse="true"
+ 
++
++# O kernel 3.10 não lê zstd
++deviceinfo_initfs_compression="gzip"
++# A partição boot tem só 16 MB
++deviceinfo_create_initfs_extra="true"
+diff --git a/device/archived/linux-motorola-athene/APKBUILD b/device/archived/linux-motorola-athene/APKBUILD
+index f7f6c7fc7b..d527b94c08 100644
+--- a/device/archived/linux-motorola-athene/APKBUILD
++++ b/device/archived/linux-motorola-athene/APKBUILD
+@@ -35,6 +35,7 @@ source="
+ 	disable-wireguard-Kconfig.patch
+ 	optimize_compile_options.patch
+ 	linux3.7to4.5-ARM64-remove-Sun-Solaris-style-flag-on-section.patch
++	loop-ignore-o-direct.patch
+ "
+ builddir="$srcdir/$_repository-$_commit"
+ 
+@@ -53,7 +54,8 @@ build() {
+ }
+ 
+ package() {
+-	downstreamkernel_package "$builddir" "$pkgdir" "$_carch" "$_flavor"
++	# Boot do athene tem 16 MB: o kernel precisa ir compactado.
++	KERNEL_IMAGE_NAME=Image.gz downstreamkernel_package "$builddir" "$pkgdir" "$_carch" "$_flavor"
+ 
+ 	# Master DTB (deviceinfo_bootimg_qcdt)
+ 	install -Dm644 "$builddir/arch/arm64/boot/dt.img" \
+@@ -62,10 +64,11 @@ package() {
+ 
+ sha512sums="
+ 74d13e6787337454dc09c643efcf95cd46a2f02deecbe687c7a451f53bc2a5978aca394cf76f828cced88a6cffb310deb430c2c8c989471b368733f1aad728c2  linux-motorola-athene-4f6c8d2e1507595b5ef404d076128874176f1219.tar.gz
+-394049c60d59cf5230522a6bcbb9bdedee2a7f282465f73b7816a11c5d090381a4e1f2cf1521e3d2e08548c47039dbb7975b65482c98bdae3eef0381ba6bd3ff  config-motorola-athene.aarch64
++4af6f145be8a897cc8edff5005e0b18139ad825a5b8a62857ab0c17ebacfe2b6f768581f148e0a2c8f5a921fcee8a7633a43fb3a4d154fa90ce972648e23518a  config-motorola-athene.aarch64
+ 972e98523d6ef06342e69a09e979bdd86904cf7f9a843b519b37791e531b680182564a2ab537c94629c3589f4e775b2c39de04c64e210a0f8b6f10745c3596f1  01_fix_gcc6_errors.patch
+ 84f97f389b6a7305519a257666367157f84ed20c64633d51b8608f7d55517514870b487ac7428ac5c2a49b0a1371100a8862120b415c3eda5255ad485385ac81  scripts-dtc-yylloc.patch
+ a32585798f24bb764718209e6c35e304b3499b53e2b34aa9e935bc55197d041aa1169f8352319abbe174a3d5f3ad68b01a7ea5addd3652fe7bcfe8ae4a2a1a6e  disable-wireguard-Kconfig.patch
+ c6123ff692663f383151d722d0c43501ba4c24c0e5c8b5206356fd76bde6b72d20eebee9fcce1a01e6ee5bb637976f7f4349746ccdc7bc474a1a1e83b68a3f08  optimize_compile_options.patch
+ 75545ccd0082a119b9ad95fcef3523c939a5c946f8f3a5c3dde15cee1502f6c1011050a0ad5359426f018bb7ceea1c97a28c7665941bc89f365c8d11065ce0f6  linux3.7to4.5-ARM64-remove-Sun-Solaris-style-flag-on-section.patch
++6b7ba087943a25963e0ba08f723f64a14faf9c97e5d760f1a550b47b1fc5781415128e31825ba81325647952c43715ddcd5988068101b3ccc162bbd73f65a32f  loop-ignore-o-direct.patch
+ "
+diff --git a/device/archived/linux-motorola-athene/config-motorola-athene.aarch64 b/device/archived/linux-motorola-athene/config-motorola-athene.aarch64
+index e5dae9856b..5eb7923017 100644
+--- a/device/archived/linux-motorola-athene/config-motorola-athene.aarch64
++++ b/device/archived/linux-motorola-athene/config-motorola-athene.aarch64
+@@ -1668,7 +1668,7 @@ CONFIG_SENSORS_CAPELLA_CM36283=y
+ # CONFIG_SENSORS_BMA2X2 is not set
+ # CONFIG_SENSORS_MC3430 is not set
+ # CONFIG_SENSORS_ISL29044A is not set
+-CONFIG_STMVL53L0=y
++# CONFIG_STMVL53L0 is not set
+ CONFIG_EPL8802=y
+ CONFIG_SENSORS_FPC_1020=y
+ 
+@@ -2401,7 +2401,7 @@ CONFIG_V4L_PLATFORM_DRIVERS=y
+ # Qualcomm MSM Camera And Video
+ #
+ # CONFIG_MSM_CAMERA is not set
+-CONFIG_MSMB_CAMERA=y
++# CONFIG_MSMB_CAMERA is not set
+ # CONFIG_MSMB_CAMERA_DEBUG is not set
+ CONFIG_MSM_CAMERA_SENSOR=y
+ CONFIG_MSM_CPP=y

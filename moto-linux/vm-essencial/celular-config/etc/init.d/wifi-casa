@@ -1,0 +1,19 @@
+#!/sbin/openrc-run
+description="Wi-Fi de casa (wpa_supplicant -Dwext + DHCP)"
+depend() {
+	need wcnss-wlan
+	after networkmanager
+}
+start() {
+	ebegin "Conectando ao Wi-Fi"
+	start-stop-daemon --start --exec /usr/sbin/wpa_supplicant --pidfile /run/wifi-casa-wpa.pid -- \
+		-B -P /run/wifi-casa-wpa.pid -Dwext -i wlan0 -c /etc/wpa_supplicant/casa.conf && \
+	udhcpc -i wlan0 -b -p /run/wifi-casa-dhcp.pid -x hostname:moto-g4 >/dev/null 2>&1
+	eend $?
+}
+stop() {
+	ebegin "Desligando o Wi-Fi"
+	start-stop-daemon --stop --pidfile /run/wifi-casa-dhcp.pid 2>/dev/null
+	start-stop-daemon --stop --pidfile /run/wifi-casa-wpa.pid
+	eend $?
+}

@@ -1,0 +1,3 @@
+@echo off
+python "%~dp0painel.py"
+pause

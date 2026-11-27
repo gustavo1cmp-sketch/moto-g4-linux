@@ -1,0 +1,68 @@
+Thu Nov 26 17:27:00 UTC 2026
+[17:27:02] [92m*** (1/4) PREPARE NATIVE CHROOT ***[0m
+[17:27:04] (native) Creating chroot[0m
+[17:27:06] (native) install cryptsetup util-linux parted[0m
+[17:27:08] [92m*** (2/4) CREATE DEVICE ROOTFS ("motorola-athene") ***[0m
+[17:27:11] (native) install qemu-aarch64[0m
+[17:27:12] Register qemu binfmt (aarch64)[0m
+[17:27:12] (rootfs_motorola-athene) Creating chroot[0m
+[17:27:20] Building [94m1[0m package[0m
+[17:27:20]    [94m*[0m edge/device-motorola-athene[0m
+[17:27:20] [93m=> (1/1)[0m [94medge/device-motorola-athene[0m: Installing dependencies[0m
+[17:27:20] Initializing aarch64 buildroot[0m
+[17:27:22] (buildroot_aarch64) Creating chroot[0m
+[17:27:25] (buildroot_aarch64) install abuild apk-tools build-base ccache git pigz[0m
+[17:27:33] (native) install ccache-cross-symlinks abuild gcc-aarch64 g++-aarch64 crossdirect[0m
+[17:27:44] (buildroot_aarch64) install devicepkg-dev[0m
+[17:27:46] [93m=>[0m [94medge/device-motorola-athene[0m: Building package (cross compiling: crossdirect)[0m
+[17:27:53] Zapping buildroots (running in strict mode by default, use --lax to skip zap)[0m
+[17:27:55] [93m=>[0m [94medge/device-motorola-athene[0m: Done![0m
+[17:27:55] [93m=>[0m [92mFinished building packages[0m
+[17:27:55] (rootfs_motorola-athene) install postmarketos-base device-motorola-athene postmarketos-ui-console postmarketos-base-nofde font-droid font-twemoji sudo-rs font-droid-nonlatin lang[0m
+[17:28:58] (rootfs_motorola-athene) install postmarketos-mkinitfs[0m
+[17:28:59] (rootfs_motorola-athene) mkinitfs[0m
+[17:29:04]  [92m*** SET LOGIN PASSWORD FOR: 'user' ***[0m
+[17:29:10] (native) Creating chroot[0m
+[17:29:12] (native) install cryptsetup util-linux parted[0m
+[17:29:13] [92m*** (3/4) PREPARE INSTALL BLOCKDEVICE ***[0m
+[17:29:14] (native) create motorola-athene.img (1248M)[0m
+[17:29:14] (native) mount /dev/install (motorola-athene.img)[0m
+[17:29:14] (native) partition /dev/install (boot: 512M)[0m
+[17:29:15] Mounting partitions of /dev/loop0 inside the chroot[0m
+[17:29:16] (native) install e2fsprogs[0m
+[17:29:17] (native) format /dev/installp2 (pmOS_root, ext4)[0m
+[17:29:17] (native) mount /dev/installp2 to /mnt/install[0m
+[17:29:17] (native) install e2fsprogs[0m
+[17:29:17] (native) format /dev/installp1 (pmOS_boot, ext2)[0m
+[17:29:19] (native) install qemu-aarch64[0m
+[17:29:19] (native) create /etc/fstab[0m
+[17:29:20] (rootfs_motorola-athene) mkinitfs[0m
+[17:29:26] [92m*** (4/4) FILL INSTALL BLOCKDEVICE ***[0m
+[17:29:26] (native) copy rootfs_motorola-athene to /mnt/install/[0m
+[17:29:37] (native) make sparse rootfs[0m
+[17:29:37] (native) install android-tools-img2simg[0m
+[17:29:45] [0m
+[17:29:45] [92m*** FLASHING INFORMATION ***[0m
+[17:29:45] Run the following to flash your installation to the target device:[0m
+[17:29:45] * pmbootstrap flasher flash_rootfs[0m
+[17:29:45]   Flashes the generated rootfs image to your device:[0m
+[17:29:45]   /home/dev/.local/var/pmbootstrap/chroot_native/home/pmos/rootfs/motorola-athene.img[0m
+[17:29:45]   ([94mNOTE:[0m This file has a partition table, which contains /boot and / subpartitions. That way we don't need to change the partition layout on your device.)[0m
+[17:29:45] * pmbootstrap flasher flash_kernel[0m
+[17:29:45]   Flashes the kernel + initramfs to your device:[0m
+[17:29:45]   /home/dev/.local/var/pmbootstrap/chroot_rootfs_motorola-athene/boot[0m
+[17:29:45]   ([94mNOTE:[0m fastboot also supports booting the kernel/initramfs directly without flashing. Use 'pmbootstrap flasher boot' to do that.)[0m
+[17:29:45] * If the above steps do not work, you can also create symlinks to the generated files with 'pmbootstrap export' and flash outside of pmbootstrap.[0m
+[17:29:45] [0m
+[17:29:45] [92m*** SSH DAEMON INFORMATION ***[0m
+[17:29:45] SSH daemon is enabled (disable with --no-sshd).[0m
+[17:29:45] Login as 'user' with the password given during installation.[0m
+[17:29:45] [0m
+[17:29:45] [92m*** FIREWALL INFORMATION ***[0m
+[17:29:45] Firewall is enabled, but may not work (couldn't determine if kernel supports nftables).[0m
+[17:29:45] For more information: https://postmarketos.org/firewall[0m
+[17:29:45] [0m
+[17:29:45] [94mNOTE:[0m chroot is still active (use 'pmbootstrap shutdown' as necessary)[0m
+[17:29:45] [92mDONE![0m[0m
+SAIDA_INSTALL=0
+Thu Nov 26 17:29:46 UTC 2026

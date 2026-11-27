@@ -1,0 +1,14 @@
+#!/sbin/openrc-run
+description="Liga o Wi-Fi (Pronto/WCNSS): carrega o firmware e inicia o driver prima"
+depend() {
+	before networkmanager wpa_supplicant
+}
+start() {
+	ebegin "Ligando o Wi-Fi"
+	# Abrir /dev/wcnss_wlan faz o kernel carregar o firmware wcnss.* de /lib/firmware.
+	( exec 3>/dev/wcnss_wlan; sleep 6 )
+	[ -d /sys/class/net/wlan0 ] || echo sta > /sys/module/wlan/parameters/fwpath
+	for i in 1 2 3 4 5 6 7 8 9 10; do [ -d /sys/class/net/wlan0 ] && break; sleep 1; done
+	[ -d /sys/class/net/wlan0 ]
+	eend $?
+}

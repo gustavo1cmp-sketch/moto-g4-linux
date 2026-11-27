@@ -1,0 +1,21 @@
+Thu Nov 26 17:08:18 UTC 2026
+[17:08:19] Zapping buildroots (running in strict mode by default, use --lax to skip zap)[0m
+[17:08:19] Update package index for aarch64 (4 file(s))[0m
+[17:08:24] Building [94m1[0m package[0m
+[17:08:24]    [94m*[0m edge/linux-motorola-athene[0m
+[17:08:24] [93m=> (1/1)[0m [94medge/linux-motorola-athene[0m: Installing dependencies[0m
+[17:08:24] Initializing x86_64 buildroot[0m
+[17:08:31] Update package index for x86_64 (4 file(s))[0m
+[17:08:34] Download http://cdn.alpinelinux.org/edge/main/x86_64/apk-tools-static-3.0.11-r0.apk[0m
+[17:08:35] (native) Creating chroot[0m
+[17:08:41] (native) install abuild apk-tools build-base ccache git pigz[0m
+[17:08:50] (native) generate abuild keys[0m
+[17:08:50] (native) install ccache-cross-symlinks abuild gcc6-aarch64[0m
+[17:08:56] (native) install gcc6 xz dtbtool sed elfutils-dev installkernel linux-headers perl gmp-dev bash bc devicepkg-dev[0m
+[17:09:11] [93m=>[0m [94medge/linux-motorola-athene[0m: Building package (cross compiling: cross-native)[0m
+[17:20:17] Zapping buildroots (running in strict mode by default, use --lax to skip zap)[0m
+[17:20:22] [93m=>[0m [94medge/linux-motorola-athene[0m: Done![0m
+[17:20:22] [93m=>[0m [92mFinished building packages[0m
+[17:20:22] [92mDONE![0m[0m
+SAIDA_KERNEL=0
+Thu Nov 26 17:20:22 UTC 2026

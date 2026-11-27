@@ -1,0 +1,11 @@
+#!/sbin/openrc-run
+description="Hora = relógio do PMIC (não gravável) + diferença salva"
+depend() {
+	provide clock
+	before *
+}
+start() {
+	ebegin "Ajustando a hora pelo RTC"
+	[ -r /etc/rtc-offset ] && date -u -s @$(( $(cat /sys/class/rtc/rtc0/since_epoch) + $(cat /etc/rtc-offset) )) >/dev/null
+	eend $?
+}
