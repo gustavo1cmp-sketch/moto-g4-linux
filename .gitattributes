@@ -1,0 +1,6 @@
+# Scripts do celular (Linux) precisam de LF; os do Windows, de CRLF.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.img binary
+*.apk binary
