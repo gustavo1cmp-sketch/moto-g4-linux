@@ -11,6 +11,8 @@ import os
 import struct
 import threading
 import time
+
+import bichinho
 from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -29,8 +31,9 @@ GB = 1024 ** 3
 VAO_BOTAO, MARGEM = 12, 20
 TOPO = 130  # faixa do relógio; os cartões começam abaixo dela
 RELOGIO = (0, 0, 420, TOPO)  # área de toque que gira a tela
+AREA_BICHINHO = (620, 400, 1300, 960)  # toque aqui = carinho
 LADO_CAPA_GRANDE = 680
-PAGINAS = ("painel", "tocando")  # arrastar para o lado troca a página; nova função = nova página aqui
+PAGINAS = ("painel", "tocando", "bichinho")  # arrastar para o lado troca a página; nova função = nova página aqui
 ARRASTE_MIN = 220  # px de arraste na horizontal para virar a página
 SERIES = ("cpu", "cpu_temp", "gpu", "gpu_temp")
 PERFIS = (("silencioso", "Silencioso"), ("normal", "Normal"), ("jogo", "Jogo"))  # mesmos nomes do painel.py
@@ -79,6 +82,9 @@ def botao_em(x, y, pagina=0):
     """Ação do botão sob o ponto (coordenadas do desenho), ou None. Inclui o vão: alvo maior que o ícone."""
     if RELOGIO[0] <= x < RELOGIO[2] and RELOGIO[1] <= y < RELOGIO[3]:
         return "girar"
+    if PAGINAS[pagina] == "bichinho":
+        x0, y0, x1, y1 = AREA_BICHINHO
+        return "carinho" if x0 <= x < x1 and y0 <= y < y1 else None
     if PAGINAS[pagina] == "tocando":
         for acao, (x0, y0, x1, y1) in botoes_tocando():
             if x0 - 14 <= x < x1 + 14 and y0 - 14 <= y < y1 + 14:
@@ -119,6 +125,7 @@ class Estado:
         self.mudou = threading.Event()
         self.capa_grande, self.capa_id = None, None
         self.pagina = 0
+        self.carinho_em = float("-inf")
         try:
             with open(ROTACAO) as f:
                 self.girada = f.read().strip() == "1"
@@ -229,6 +236,9 @@ def ler_toques(estado):
                         acao = botao_em(*valor_gesto, pagina=estado.pagina)
                         if acao == "girar":
                             estado.girar()
+                        elif acao == "carinho":
+                            estado.carinho_em = time.monotonic()
+                            estado.mudou.set()
                         elif acao:
                             estado.tocar(acao)
                     x = y = inicio = None
@@ -334,6 +344,24 @@ class Tela:
             ativo = agora - apertado.get(acao, 0) < 0.3
             d.rounded_rectangle(caixa, 28, fill=BOTAO_ATIVO if ativo else BOTAO)
             self.icone(d, acao, caixa)
+        return img
+
+    def bichinho(self, hora, dados, hist, carinho_em):
+        agora = time.monotonic()
+        estado, frase = bichinho.humor(dados, hist, carinho_em, agora, time.localtime().tm_hour)
+        pequeno = bichinho.desenhar(self.Image, self.ImageDraw, estado, int(agora * 4), time.localtime().tm_hour)
+        img = pequeno.resize((LARGURA, ALTURA), self.Image.NEAREST)
+        d = self.ImageDraw.Draw(img)
+        self.texto(d, (MARGEM + 8, TOPO // 2 + 4), hora, "hora", TEXTO, "lm")
+        frase = self.cortar(d, frase, "grande_artista", 1300)
+        largura = d.textlength(frase, font=self.f["grande_artista"]) + 80
+        x0, y0, y1 = LARGURA // 2 - largura // 2, 220, 330
+        d.rounded_rectangle((x0, y0, x0 + largura, y1), 36, fill=TEXTO)
+        d.polygon([(LARGURA // 2 - 26, y1 - 2), (LARGURA // 2 + 26, y1 - 2), (LARGURA // 2, y1 + 34)], fill=TEXTO)
+        self.texto(d, (LARGURA // 2, (y0 + y1) // 2), frase, "grande_artista", FUNDO, "mm")
+        numeros = "CPU %s%% · %s °C        GPU %s%% · %s °C" % tuple(
+            num(dados.get(k)) for k in ("cpu", "cpu_temp", "gpu", "gpu_temp"))
+        self.texto(d, (LARGURA // 2, ALTURA - 70), numeros, "detalhe", SECUNDARIO, "mm")
         return img
 
     def pontos(self, img, pagina):
@@ -455,7 +483,7 @@ def main():
             midia = dados.get("midia")
             mesma = isinstance(midia, dict) and midia.get("id") == estado.capa_id
             capa_grande = estado.capa_grande if mesma else None
-            pagina, girada = estado.pagina, estado.girada
+            pagina, girada, carinho_em = estado.pagina, estado.girada, estado.carinho_em
         brilho = BRILHO if ativo else BRILHO_DESCANSO
         if brilho != brilho_atual:
             luz(brilho)
@@ -465,11 +493,13 @@ def main():
         else:
             if PAGINAS[pagina] == "tocando":
                 img = tela.tocando(hora, dados, apertado, capa_grande)
+            elif PAGINAS[pagina] == "bichinho":
+                img = tela.bichinho(hora, dados, hist, carinho_em)
             else:
                 img = tela.painel(hora, dados, hist, apertado)
             tela.pontos(img, pagina)
             tela.mostrar(img, girada)
-        estado.mudou.wait(1)
+        estado.mudou.wait(0.25 if ativo and PAGINAS[pagina] == "bichinho" else 1)  # só o bichinho anima
         estado.mudou.clear()
 
 
