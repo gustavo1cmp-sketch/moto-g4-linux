@@ -210,7 +210,10 @@ def ler_toques(estado):
                     x = valor * 1079 // max(max_x, 1)
                 elif tipo == 3 and codigo == 0x36:
                     y = valor * 1919 // max(max_y, 1)
-                elif tipo == 1 and codigo == 0x14A and valor == 0 and x is not None and y is not None:  # dedo levantado
+                # Dedo levantado: esta tela (synaptics, protocolo B) não manda BTN_TOUCH, só ABS_MT_TRACKING_ID = -1.
+                # shortcut: pensado para um dedo; com dois, o segundo pode encerrar o gesto do primeiro.
+                elif ((tipo == 3 and codigo == 0x39 and valor == -1) or (tipo == 1 and codigo == 0x14A and valor == 0)) \
+                        and x is not None and y is not None:
                     tipo_gesto, valor_gesto = gesto(inicio or toque_para_desenho(x, y), toque_para_desenho(x, y))
                     if tipo_gesto == "virar":
                         estado.virar(valor_gesto)
@@ -246,6 +249,8 @@ class Tela:
         self.fb = os.open("/dev/fb0", os.O_RDWR)
         self.var = bytearray(160)
         fcntl.ioctl(self.fb, 0x4600, self.var)  # FBIOGET_VSCREENINFO
+        # FBIOBLANK/UNBLANK: o driver do toque (synaptics) só sai do modo de espera com este aviso de "tela acesa".
+        fcntl.ioctl(self.fb, 0x4611, 0)
 
     def mostrar(self, img):
         girada = img.transpose(self.Image.Transpose.ROTATE_90 if GIRAR_ANTI_HORARIO else self.Image.Transpose.ROTATE_270)
