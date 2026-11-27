@@ -18,7 +18,7 @@ ENDERECO = ("172.16.42.1", 8766)  # só a rede USB; o Wi-Fi não alcança
 PC = "172.16.42.2"
 LARGURA, ALTURA = 1920, 1080  # desenho na horizontal; a tela física é 1080x1920
 STRIDE_PX = 1088  # linha do framebuffer tem 4352 bytes (1088 px), não 1080
-GIRAR_ANTI_HORARIO = True  # False vira o painel de cabeça para baixo
+ROTACAO = "/var/lib/tela-painel/rotacao"  # "1" = girada 180°; toque no relógio alterna
 DESCANSO_APOS = 30  # segundos sem dados do PC
 PONTOS = 300  # 5 min com um envio por segundo
 BRILHO, BRILHO_DESCANSO = 255, 12
@@ -26,9 +26,9 @@ LUZ = "/sys/class/leds/lcd-backlight/brightness"
 TOQUE = "/dev/input/event2"  # synaptics_dsx_i2c
 GB = 1024 ** 3
 
-ACOES = ("anterior", "tocar", "proxima", "volume-menos", "mudo", "volume-mais")
-LADO_BOTAO, VAO_BOTAO, MARGEM = 130, 12, 20
-LADO_CAPA = LADO_BOTAO
+VAO_BOTAO, MARGEM = 12, 20
+TOPO = 130  # faixa do relógio; os cartões começam abaixo dela
+RELOGIO = (0, 0, 420, TOPO)  # área de toque que gira a tela
 LADO_CAPA_GRANDE = 680
 PAGINAS = ("painel", "tocando")  # arrastar para o lado troca a página; nova função = nova página aqui
 ARRASTE_MIN = 220  # px de arraste na horizontal para virar a página
@@ -40,16 +40,9 @@ TEXTO, SECUNDARIO, LINHA = "#e6edf3", "#9da7b3", "#30363d"
 AZUL, LARANJA, QUENTE, AVISO, DESCANSO_COR = "#3987e5", "#d95926", "#ff7b72", "#f0b429", "#59616b"
 
 
-def retangulo_botao(i):
-    """Caixa (x0, y0, x1, y1) do botão i, alinhados à direita no topo."""
-    total = len(ACOES) * LADO_BOTAO + (len(ACOES) - 1) * VAO_BOTAO
-    x0 = LARGURA - MARGEM - total + i * (LADO_BOTAO + VAO_BOTAO)
-    return x0, MARGEM, x0 + LADO_BOTAO, MARGEM + LADO_BOTAO
-
-
 def cartoes():
     """Caixas dos quatro cartões: CPU e GPU em cima, RAM e perfil embaixo."""
-    topo, vao = MARGEM * 2 + LADO_BOTAO + 10, 20
+    topo, vao = TOPO, 20
     meio = (LARGURA - 2 * MARGEM - vao) // 2
     alto_proc = (ALTURA - topo - MARGEM - vao) * 3 // 5
     col = lambda c: (MARGEM + c * (meio + vao), MARGEM + c * (meio + vao) + meio)
@@ -84,15 +77,13 @@ def gesto(inicio, fim):
 
 def botao_em(x, y, pagina=0):
     """Ação do botão sob o ponto (coordenadas do desenho), ou None. Inclui o vão: alvo maior que o ícone."""
+    if RELOGIO[0] <= x < RELOGIO[2] and RELOGIO[1] <= y < RELOGIO[3]:
+        return "girar"
     if PAGINAS[pagina] == "tocando":
         for acao, (x0, y0, x1, y1) in botoes_tocando():
             if x0 - 14 <= x < x1 + 14 and y0 - 14 <= y < y1 + 14:
                 return acao
         return None
-    for i, acao in enumerate(ACOES):
-        x0, y0, x1, y1 = retangulo_botao(i)
-        if x0 - VAO_BOTAO // 2 <= x < x1 + VAO_BOTAO // 2 and y0 - MARGEM <= y < y1 + VAO_BOTAO:
-            return acao
     for i, (nome, _) in enumerate(PERFIS):
         x0, y0, x1, y1 = retangulo_perfil(i)
         if x0 - VAO_BOTAO // 2 <= x < x1 + VAO_BOTAO // 2 and y0 - VAO_BOTAO <= y < y1 + VAO_BOTAO:
@@ -100,9 +91,9 @@ def botao_em(x, y, pagina=0):
     return None
 
 
-def toque_para_desenho(px, py, anti_horario=GIRAR_ANTI_HORARIO):
+def toque_para_desenho(px, py, girada=False):
     """Converte o toque (tela em pé, 1080x1920) para as coordenadas do desenho deitado."""
-    if anti_horario:
+    if not girada:
         return LARGURA - 1 - py, px
     return py, ALTURA - 1 - px
 
@@ -126,8 +117,24 @@ class Estado:
         self.acoes = []
         self.apertado = {}  # acao -> instante do toque (realce rápido)
         self.mudou = threading.Event()
-        self.capa, self.capa_grande, self.capa_id = None, None, None
+        self.capa_grande, self.capa_id = None, None
         self.pagina = 0
+        try:
+            with open(ROTACAO) as f:
+                self.girada = f.read().strip() == "1"
+        except OSError:
+            self.girada = False
+
+    def girar(self):
+        with self.trava:
+            self.girada = not self.girada
+        try:
+            os.makedirs(os.path.dirname(ROTACAO), exist_ok=True)
+            with open(ROTACAO, "w") as f:
+                f.write("1" if self.girada else "0")
+        except OSError:  # sem gravar, vale só até reiniciar
+            pass
+        self.mudou.set()
 
     def virar(self, passo):
         with self.trava:
@@ -152,7 +159,7 @@ class Estado:
                 caber = lambda lado: img.resize((max(1, round(img.width * lado / max(img.size))),
                                                  max(1, round(img.height * lado / max(img.size)))), Image.LANCZOS)
                 with self.trava:  # ampliada se preciso: a capa do Spotify chega com uns 300 px
-                    self.capa, self.capa_grande, self.capa_id = caber(LADO_CAPA), caber(LADO_CAPA_GRANDE), midia.get("id")
+                    self.capa_grande, self.capa_id = caber(LADO_CAPA_GRANDE), midia.get("id")
             except Exception:  # capa ilegível: segue sem ela
                 pass
         return acoes, self.capa_id
@@ -214,17 +221,20 @@ def ler_toques(estado):
                 # shortcut: pensado para um dedo; com dois, o segundo pode encerrar o gesto do primeiro.
                 elif ((tipo == 3 and codigo == 0x39 and valor == -1) or (tipo == 1 and codigo == 0x14A and valor == 0)) \
                         and x is not None and y is not None:
-                    tipo_gesto, valor_gesto = gesto(inicio or toque_para_desenho(x, y), toque_para_desenho(x, y))
+                    fim = toque_para_desenho(x, y, estado.girada)
+                    tipo_gesto, valor_gesto = gesto(inicio or fim, fim)
                     if tipo_gesto == "virar":
                         estado.virar(valor_gesto)
                     else:
                         acao = botao_em(*valor_gesto, pagina=estado.pagina)
-                        if acao:
+                        if acao == "girar":
+                            estado.girar()
+                        elif acao:
                             estado.tocar(acao)
                     x = y = inicio = None
                     continue
                 if inicio is None and x is not None and y is not None:  # primeiro ponto do dedo
-                    inicio = toque_para_desenho(x, y)
+                    inicio = toque_para_desenho(x, y, estado.girada)
         except OSError:
             time.sleep(5)
 
@@ -252,8 +262,8 @@ class Tela:
         # FBIOBLANK/UNBLANK: o driver do toque (synaptics) só sai do modo de espera com este aviso de "tela acesa".
         fcntl.ioctl(self.fb, 0x4611, 0)
 
-    def mostrar(self, img):
-        girada = img.transpose(self.Image.Transpose.ROTATE_90 if GIRAR_ANTI_HORARIO else self.Image.Transpose.ROTATE_270)
+    def mostrar(self, img, girada=False):
+        girada = img.transpose(self.Image.Transpose.ROTATE_270 if girada else self.Image.Transpose.ROTATE_90)
         quadro = self.Image.new("RGB", (STRIDE_PX, 1920))
         quadro.paste(girada, (0, 0))
         os.lseek(self.fb, 0, 0)
@@ -304,7 +314,7 @@ class Tela:
     def tocando(self, hora, dados, apertado, capa_grande):
         img = self.Image.new("RGB", (LARGURA, ALTURA), FUNDO)
         d = self.ImageDraw.Draw(img)
-        self.texto(d, (MARGEM + 8, MARGEM + LADO_BOTAO // 2), hora, "hora", TEXTO, "lm")
+        self.texto(d, (MARGEM + 8, TOPO // 2 + 4), hora, "hora", TEXTO, "lm")
         midia = dados.get("midia")
         if not isinstance(midia, dict):
             self.texto(d, (LARGURA // 2, ALTURA // 2), "Nada tocando no PC", "valor_menor", SECUNDARIO, "mm")
@@ -405,32 +415,12 @@ class Tela:
             txt = txt[:-1]
         return txt.rstrip() + "…"
 
-    def musica(self, img, d, midia, capa):
-        x, fim, meio = 300, retangulo_botao(0)[0] - 24, MARGEM + LADO_BOTAO // 2
-        if capa is not None:
-            img.paste(capa, (x, meio - capa.height // 2))
-            x += LADO_CAPA + 22
-        artista = midia.get("artista") or ""
-        if not midia.get("tocando"):
-            artista = "Pausado" + (" · " + artista if artista else "")
-        self.texto(d, (x, meio - 6), self.cortar(d, midia.get("titulo") or "", "musica", fim - x), "musica", TEXTO, "ls")
-        self.texto(d, (x, meio + 6), self.cortar(d, artista, "detalhe", fim - x), "detalhe", SECUNDARIO, "lt")
-
-    def painel(self, hora, dados, hist, apertado, capa=None):
+    def painel(self, hora, dados, hist, apertado):
         img = self.Image.new("RGB", (LARGURA, ALTURA), FUNDO)
         d = self.ImageDraw.Draw(img)
-        self.texto(d, (MARGEM + 8, MARGEM + LADO_BOTAO // 2), hora, "hora", TEXTO, "lm")
-        midia = dados.get("midia")
-        if isinstance(midia, dict):  # a música tem prioridade sobre o aviso do Afterburner no topo
-            self.musica(img, d, midia, capa)
-        elif not dados.get("afterburner"):
-            self.texto(d, (560, MARGEM + LADO_BOTAO // 2), "Abra o MSI Afterburner", "aviso", AVISO, "lm")
-        agora = time.monotonic()
-        for i, acao in enumerate(ACOES):
-            caixa = retangulo_botao(i)
-            ativo = agora - apertado.get(acao, 0) < 0.3
-            d.rounded_rectangle(caixa, 20, fill=BOTAO_ATIVO if ativo else BOTAO)
-            self.icone(d, acao, caixa)
+        self.texto(d, (MARGEM + 8, TOPO // 2 + 4), hora, "hora", TEXTO, "lm")
+        if not dados.get("afterburner"):
+            self.texto(d, (LARGURA - MARGEM - 8, TOPO // 2 + 4), "Abra o MSI Afterburner", "aviso", AVISO, "rm")
         c = cartoes()
         vram = "—" if dados.get("vram_mb") is None else num(dados["vram_mb"] / 1024, 1)
         if dados.get("vram_total_mb"):
@@ -464,21 +454,21 @@ def main():
             apertado = dict(estado.apertado)
             midia = dados.get("midia")
             mesma = isinstance(midia, dict) and midia.get("id") == estado.capa_id
-            capa, capa_grande = (estado.capa, estado.capa_grande) if mesma else (None, None)
-            pagina = estado.pagina
+            capa_grande = estado.capa_grande if mesma else None
+            pagina, girada = estado.pagina, estado.girada
         brilho = BRILHO if ativo else BRILHO_DESCANSO
         if brilho != brilho_atual:
             luz(brilho)
             brilho_atual = brilho
         if not ativo:
-            tela.mostrar(tela.descanso(hora))
+            tela.mostrar(tela.descanso(hora), girada)
         else:
             if PAGINAS[pagina] == "tocando":
                 img = tela.tocando(hora, dados, apertado, capa_grande)
             else:
-                img = tela.painel(hora, dados, hist, apertado, capa)
+                img = tela.painel(hora, dados, hist, apertado)
             tela.pontos(img, pagina)
-            tela.mostrar(img)
+            tela.mostrar(img, girada)
         estado.mudou.wait(1)
         estado.mudou.clear()
 
