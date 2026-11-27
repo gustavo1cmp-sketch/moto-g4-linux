@@ -38,9 +38,32 @@ ARRASTE_MIN = 220  # px de arraste na horizontal para virar a página
 SERIES = ("cpu", "cpu_temp", "gpu", "gpu_temp")
 PERFIS = (("silencioso", "Silencioso"), ("normal", "Normal"), ("jogo", "Jogo"))  # mesmos nomes do painel.py
 
-FUNDO, CARTAO, BOTAO, BOTAO_ATIVO = "#0d1117", "#161b22", "#21262d", "#3d444d"
-TEXTO, SECUNDARIO, LINHA = "#e6edf3", "#9da7b3", "#30363d"
-AZUL, LARANJA, QUENTE, AVISO, DESCANSO_COR = "#3987e5", "#d95926", "#ff7b72", "#f0b429", "#59616b"
+# Visual "gamer": fundo quase preto com grade, bordas neon que mudam de cor com a temperatura.
+FUNDO, GRADE, CARTAO, BOTAO, BOTAO_ATIVO = "#04060c", "#0b1222", "#0a0f1c", "#0e1526", "#1f2c4a"
+TEXTO, SECUNDARIO, LINHA, DESCANSO_COR = "#e6f4ff", "#7d8ba3", "#1a2236", "#3a4560"
+CIANO, ROXO, MAGENTA, VERMELHO, LARANJA, AVISO = "#00e5ff", "#a259ff", "#ff2bd6", "#ff3355", "#ff8c1a", "#ffd000"
+COR_PERFIL = {"silencioso": CIANO, "normal": ROXO, "jogo": VERMELHO}
+FONTES = "/usr/local/share/fonts/painel/"  # Orbitron e Rajdhani (licença OFL), copiadas de google/fonts
+DIAS, MESES = ("SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"), "JAN FEV MAR ABR MAI JUN JUL AGO SET OUT NOV DEZ".split()
+
+
+def cor_nivel(v, limites=(60, 70, 80)):
+    """Ciano (frio) → roxo → magenta → vermelho (quente)."""
+    if v is None:
+        return CIANO
+    return next((c for c, lim in zip((CIANO, ROXO, MAGENTA), limites) if v < lim), VERMELHO)
+
+
+def mistura(a, b, k):
+    """Cor a misturada com b; k = quanto de a (0–1)."""
+    ra, rb = (tuple(int(c[i:i + 2], 16) for i in (1, 3, 5)) for c in (a, b))
+    return "#%02x%02x%02x" % tuple(round(x * k + y * (1 - k)) for x, y in zip(ra, rb))
+
+
+def chanfro(caixa, c=26):
+    """Polígono da caixa com os cantos superior esquerdo e inferior direito cortados (estilo HUD)."""
+    x0, y0, x1, y1 = caixa
+    return [(x0 + c, y0), (x1, y0), (x1, y1 - c), (x1 - c, y1), (x0, y1), (x0, y0 + c)]
 
 
 def cartoes():
@@ -261,11 +284,21 @@ class Tela:
     def __init__(self):
         from PIL import Image, ImageDraw, ImageFont
         self.Image, self.ImageDraw = Image, ImageDraw
-        fonte = lambda tamanho, negrito=False: ImageFont.truetype(
-            "/usr/share/fonts/dejavu/DejaVuSans%s.ttf" % ("-Bold" if negrito else ""), tamanho)
-        self.f = {"hora": fonte(88), "titulo": fonte(46, True), "valor": fonte(96), "valor_menor": fonte(80),
-                  "detalhe": fonte(36), "musica": fonte(38, True), "grande_titulo": fonte(64, True), "grande_artista": fonte(44), "pequena": fonte(30), "aviso": fonte(36), "descanso": fonte(300),
-                  "descanso_txt": fonte(40)}
+        from PIL import ImageChops, ImageFilter
+        self.ImageChops, self.ImageFilter = ImageChops, ImageFilter
+
+        def orbitron(tamanho):  # números e títulos; só tem letras sem acento
+            f = ImageFont.truetype(FONTES + "Orbitron.ttf", tamanho)
+            f.set_variation_by_name("Bold")
+            return f
+        rajdhani = lambda tamanho, negrito=False: ImageFont.truetype(
+            FONTES + "Rajdhani-%s.ttf" % ("Bold" if negrito else "SemiBold"), tamanho)
+        self.f = {"hora": orbitron(78), "titulo": orbitron(40), "valor": orbitron(92), "valor_menor": orbitron(76),
+                  "data": rajdhani(44, True), "detalhe": rajdhani(42), "musica": rajdhani(48, True),
+                  "grande_titulo": rajdhani(82, True), "grande_artista": rajdhani(54), "pequena": rajdhani(34),
+                  "aviso": rajdhani(46, True), "descanso": orbitron(240), "descanso_txt": rajdhani(48),
+                  "balao": ImageFont.truetype("/usr/share/fonts/dejavu/DejaVuSans.ttf", 44)}  # tem ♪
+        self.fundos = {}
         self.fb = os.open("/dev/fb0", os.O_RDWR)
         self.var = bytearray(160)
         fcntl.ioctl(self.fb, 0x4600, self.var)  # FBIOGET_VSCREENINFO
@@ -291,6 +324,59 @@ class Tela:
         self.texto(d, (LARGURA // 2, ALTURA // 2 + 170), "PC sem resposta", "descanso_txt", DESCANSO_COR, "mm")
         return img
 
+    def fundo(self, molduras):
+        """Grade + linha neon do topo + molduras brilhantes [(caixa, cor)]; o brilho é caro, então fica em cache."""
+        chave = tuple(molduras)
+        if chave not in self.fundos:
+            if len(self.fundos) > 12:
+                self.fundos.clear()
+            img = self.Image.new("RGB", (LARGURA, ALTURA), FUNDO)
+            d = self.ImageDraw.Draw(img)
+            for x in range(0, LARGURA, 48):
+                d.line((x, 0, x, ALTURA), fill=GRADE)
+            for y in range(0, ALTURA, 48):
+                d.line((0, y, LARGURA, y), fill=GRADE)
+            for caixa, _ in molduras:
+                d.polygon(chanfro(caixa), fill=CARTAO)
+            # brilho desenhado em 1/4 do tamanho, borrado e ampliado: o mesmo efeito, bem mais rápido
+            brilho = self.Image.new("RGB", (LARGURA // 4, ALTURA // 4), "black")
+            b = self.ImageDraw.Draw(brilho)
+            for caixa, cor in molduras:
+                pts = [(x / 4, y / 4) for x, y in chanfro(caixa)]
+                b.line(pts + [pts[0]], fill=cor, width=2)
+            for x in range(LARGURA // 4):  # linha do topo, degradê ciano → magenta
+                b.point((x, (TOPO - 13) // 4), fill=mistura(MAGENTA, CIANO, x / (LARGURA / 4)))
+            brilho = brilho.filter(self.ImageFilter.GaussianBlur(3)).resize((LARGURA, ALTURA), self.Image.BILINEAR)
+            img = self.ImageChops.add(img, brilho)
+            d = self.ImageDraw.Draw(img)
+            for x in range(0, LARGURA, 2):
+                d.line((x, TOPO - 13, x + 1, TOPO - 13), fill=mistura(MAGENTA, CIANO, x / LARGURA), width=2)
+            for caixa, cor in molduras:
+                pts = chanfro(caixa)
+                d.line(pts + [pts[0]], fill=cor, width=3)
+                claro = mistura("#ffffff", cor, 0.45)  # cantos cortados mais fortes
+                d.line((pts[5], pts[0]), fill=claro, width=7)
+                d.line((pts[2], pts[3]), fill=claro, width=7)
+            self.fundos[chave] = img
+        return self.fundos[chave].copy()
+
+    def topo(self, d, hora):
+        self.texto(d, (MARGEM + 8, TOPO // 2 - 6), hora, "hora", TEXTO, "lm")
+        agora = time.localtime()
+        data = "%s %02d %s" % (DIAS[agora.tm_wday], agora.tm_mday, MESES[agora.tm_mon - 1])
+        x = MARGEM + 8 + d.textlength(hora, font=self.f["hora"]) + 34
+        self.texto(d, (x, TOPO // 2 - 2), data, "data", CIANO, "lm")
+
+    def botao(self, d, caixa, cor, ativo, apertado, c=22):
+        """Botão chanfrado: o ativo ganha fundo tingido e borda dupla (brilho falso, sem borrar)."""
+        pts = chanfro(caixa, c)
+        fundo = BOTAO_ATIVO if apertado else mistura(cor, CARTAO, 0.22) if ativo else BOTAO
+        d.polygon(pts, fill=fundo)
+        if ativo:
+            x0, y0, x1, y1 = caixa
+            fora = chanfro((x0 - 6, y0 - 6, x1 + 6, y1 + 6), c + 2)
+            d.line(fora + [fora[0]], fill=mistura(cor, FUNDO, 0.35), width=3)
+        d.line(pts + [pts[0]], fill=cor if ativo else mistura(cor, FUNDO, 0.45), width=3)
     def icone(self, d, acao, caixa):
         x0, y0, x1, y1 = caixa
         k = min(x1 - x0, y1 - y0) / 130  # desenhado para botões de 130 px; escala para os maiores
@@ -322,30 +408,35 @@ class Tela:
                 d.line((cx + u(8), cy + u(12), cx + u(32), cy - u(12)), fill=TEXTO, width=u(7))
 
     def tocando(self, hora, dados, apertado, capa_grande):
-        img = self.Image.new("RGB", (LARGURA, ALTURA), FUNDO)
-        d = self.ImageDraw.Draw(img)
-        self.texto(d, (MARGEM + 8, TOPO // 2 + 4), hora, "hora", TEXTO, "lm")
+        quadro_capa = (60, 600 - LADO_CAPA_GRANDE // 2, 60 + LADO_CAPA_GRANDE, 600 + LADO_CAPA_GRANDE // 2)
         midia = dados.get("midia")
+        img = self.fundo(((quadro_capa, CIANO),) if isinstance(midia, dict) else ())
+        d = self.ImageDraw.Draw(img)
+        self.topo(d, hora)
         if not isinstance(midia, dict):
-            self.texto(d, (LARGURA // 2, ALTURA // 2), "Nada tocando no PC", "valor_menor", SECUNDARIO, "mm")
+            self.texto(d, (LARGURA // 2, ALTURA // 2), "NADA TOCANDO", "valor_menor", SECUNDARIO, "mm")
             return img
         if capa_grande is not None:
             img.paste(capa_grande, (60 + (LADO_CAPA_GRANDE - capa_grande.width) // 2, 600 - capa_grande.height // 2))
-        else:
-            d.rounded_rectangle((60, 600 - LADO_CAPA_GRANDE // 2, 60 + LADO_CAPA_GRANDE, 600 + LADO_CAPA_GRANDE // 2), 24, fill=CARTAO)
+            d = self.ImageDraw.Draw(img)
+            pts = chanfro(quadro_capa)  # corta os cantos da capa para seguir a moldura
+            d.polygon([(quadro_capa[0], quadro_capa[1]), pts[0], pts[5]], fill=FUNDO)
+            d.polygon([(quadro_capa[2], quadro_capa[3]), pts[2], pts[3]], fill=FUNDO)
+            d.line(pts + [pts[0]], fill=CIANO, width=3)
         largura = LARGURA - MARGEM - 800
         self.texto(d, (800, 380), self.cortar(d, midia.get("titulo") or "", "grande_titulo", largura), "grande_titulo", TEXTO, "ls")
         artista = midia.get("artista") or ""
-        if not midia.get("tocando"):
-            artista = "Pausado" + (" · " + artista if artista else "")
-        self.texto(d, (800, 400), self.cortar(d, artista, "grande_artista", largura), "grande_artista", SECUNDARIO, "lt")
+        tocando = midia.get("tocando")
+        if not tocando:
+            artista = "PAUSADO" + (" · " + artista if artista else "")
+        self.texto(d, (800, 404), self.cortar(d, artista, "grande_artista", largura), "grande_artista",
+                   CIANO if tocando else AVISO, "lt")
         agora = time.monotonic()
         for acao, caixa in botoes_tocando():
-            ativo = agora - apertado.get(acao, 0) < 0.3
-            d.rounded_rectangle(caixa, 28, fill=BOTAO_ATIVO if ativo else BOTAO)
+            principal = acao == "tocar"
+            self.botao(d, caixa, MAGENTA if principal else CIANO, principal, agora - apertado.get(acao, 0) < 0.3, 30)
             self.icone(d, acao, caixa)
         return img
-
     def bichinho(self, hora, dados, hist, carinho_em):
         agora = time.monotonic()
         estado, frase = bichinho.humor(dados, hist, carinho_em, agora, time.localtime().tm_hour)
@@ -353,30 +444,33 @@ class Tela:
         img = pequeno.resize((LARGURA, ALTURA), self.Image.NEAREST)
         d = self.ImageDraw.Draw(img)
         self.texto(d, (MARGEM + 8, TOPO // 2 + 4), hora, "hora", TEXTO, "lm")
-        frase = self.cortar(d, frase, "grande_artista", 1300)
-        largura = d.textlength(frase, font=self.f["grande_artista"]) + 80
+        frase = self.cortar(d, frase, "balao", 1300)
+        largura = d.textlength(frase, font=self.f["balao"]) + 80
         x0, y0, y1 = LARGURA // 2 - largura // 2, 220, 330
         d.rounded_rectangle((x0, y0, x0 + largura, y1), 36, fill=TEXTO)
         d.polygon([(LARGURA // 2 - 26, y1 - 2), (LARGURA // 2 + 26, y1 - 2), (LARGURA // 2, y1 + 34)], fill=TEXTO)
-        self.texto(d, (LARGURA // 2, (y0 + y1) // 2), frase, "grande_artista", FUNDO, "mm")
+        self.texto(d, (LARGURA // 2, (y0 + y1) // 2), frase, "balao", FUNDO, "mm")
         numeros = "CPU %s%% · %s °C        GPU %s%% · %s °C" % tuple(
             num(dados.get(k)) for k in ("cpu", "cpu_temp", "gpu", "gpu_temp"))
         self.texto(d, (LARGURA // 2, ALTURA - 70), numeros, "detalhe", SECUNDARIO, "mm")
         return img
 
     def pontos(self, img, pagina):
-        """Bolinhas embaixo: qual página está à mostra."""
+        """Tracinhos embaixo: qual página está à mostra."""
         d = self.ImageDraw.Draw(img)
-        x = LARGURA // 2 - (len(PAGINAS) - 1) * 14
+        x = LARGURA // 2 - (len(PAGINAS) * 52 - 12) // 2
         for i in range(len(PAGINAS)):
-            d.ellipse((x - 5, ALTURA - 15, x + 5, ALTURA - 5), fill=TEXTO if i == pagina else LINHA)
-            x += 28
-
-    def grafico(self, d, caixa, valores, cor, piso, rotulo, direita):
+            d.polygon([(x + 6, ALTURA - 14), (x + 40, ALTURA - 14), (x + 34, ALTURA - 6), (x, ALTURA - 6)],
+                      fill=CIANO if i == pagina else LINHA)
+            x += 52
+    def grafico(self, img, d, caixa, valores, cor, piso, rotulo, direita):
         x0, y0, x1, y1 = caixa
         self.texto(d, (x0, y0), rotulo, "pequena", SECUNDARIO)
         self.texto(d, (x1, y0), direita, "pequena", SECUNDARIO, "ra")
-        topo, base = y0 + 44, y1
+        topo, base = y0 + 46, y1
+        meio = (topo + base) // 2
+        for x in range(x0, x1, 18):  # linha de 50% tracejada
+            d.line((x, meio, x + 8, meio), fill=LINHA)
         d.line((x0, base, x1, base), fill=LINHA, width=2)
         pontos, n = [], len(valores)
         for i, v in enumerate(valores):
@@ -384,57 +478,65 @@ class Tela:
                 continue
             frac = (min(max(v, piso), 100) - piso) / (100 - piso)
             pontos.append((x0 + (x1 - x0) * (PONTOS - n + i) / (PONTOS - 1), base - 2 - (base - topo - 4) * frac))
-        if len(pontos) > 1:
-            d.line(pontos, fill=cor, width=4, joint="curve")
-
+        if len(pontos) < 2:
+            return
+        d.polygon(pontos + [(pontos[-1][0], base - 1), (pontos[0][0], base - 1)], fill=mistura(cor, CARTAO, 0.16))
+        # brilho da linha: desenhada grossa em meia resolução, borrada e somada à imagem
+        area = (x0 - 12, topo - 12, x1 + 12, base + 12)
+        tam = (area[2] - area[0], area[3] - area[1])
+        camada = self.Image.new("RGB", (tam[0] // 2, tam[1] // 2), "black")
+        self.ImageDraw.Draw(camada).line([((x - area[0]) / 2, (y - area[1]) / 2) for x, y in pontos],
+                                         fill=mistura(cor, "#000000", 0.8), width=4)
+        camada = camada.filter(self.ImageFilter.GaussianBlur(3)).resize(tam)
+        img.paste(self.ImageChops.add(img.crop(area), camada), area[:2])
+        d.line(pontos, fill=cor, width=4, joint="curve")
+        d.line(pontos, fill=mistura("#ffffff", cor, 0.5), width=1)
     def temp(self, v):
         if v is None:
             return "— °C", SECUNDARIO
-        return (num(v) + " °C (alta)", QUENTE) if v >= 80 else (num(v) + " °C", SECUNDARIO)
-
-    def cartao_processador(self, d, caixa, nome, uso, detalhe_resto, temp_v, hist_uso, hist_temp):
+        return (num(v) + " °C (ALTA)" if v >= 80 else num(v) + " °C"), cor_nivel(v)
+    def cartao_processador(self, img, d, caixa, nome, uso, detalhe_resto, temp_v, hist_uso, hist_temp):
         x0, y0, x1, y1 = caixa
-        d.rounded_rectangle(caixa, 24, fill=CARTAO)
-        px0, px1 = x0 + 32, x1 - 32
-        self.texto(d, (px0, y0 + 30), nome, "titulo", SECUNDARIO)
-        self.texto(d, (px1, y0 + 14), num(uso) + "%", "valor", TEXTO, "ra")
+        cor = cor_nivel(temp_v)
+        px0, px1 = x0 + 40, x1 - 36
+        self.texto(d, (px0, y0 + 34), nome, "titulo", cor)
+        self.texto(d, (px1, y0 + 18), num(uso) + "%", "valor", TEXTO, "ra")
         txt_temp, cor_temp = self.temp(temp_v)
-        self.texto(d, (px0, y0 + 112), txt_temp, "detalhe", cor_temp)
+        self.texto(d, (px0, y0 + 108), txt_temp, "detalhe", cor_temp)
         largura_temp = d.textlength(txt_temp, font=self.f["detalhe"])
-        self.texto(d, (px0 + largura_temp, y0 + 112), detalhe_resto, "detalhe", SECUNDARIO)
-        altura = (y1 - 24 - (y0 + 175)) // 2
+        self.texto(d, (px0 + largura_temp, y0 + 108), detalhe_resto, "detalhe", SECUNDARIO)
+        altura = (y1 - 28 - (y0 + 175)) // 2
         g1 = (px0, y0 + 175, px1, y0 + 175 + altura - 16)
-        g2 = (px0, y0 + 175 + altura + 8, px1, y1 - 24)
-        self.grafico(d, g1, hist_uso, AZUL, 0, "Uso, 5 min", "0–100%")
+        g2 = (px0, y0 + 175 + altura + 8, px1, y1 - 28)
+        self.grafico(img, d, g1, hist_uso, cor, 0, "USO · 5 MIN", "0–100%")
         lidos = [v for v in hist_temp if v is not None]
-        self.grafico(d, g2, hist_temp, LARANJA, 20, "Temperatura",
+        self.grafico(img, d, g2, hist_temp, LARANJA, 20, "TEMPERATURA",
                      "máx %s °C (escala 20–100)" % (num(max(lidos)) if lidos else "—"))
-
     def cartao_barra(self, d, caixa, nome, valor, detalhe):
         x0, y0, x1, y1 = caixa
-        d.rounded_rectangle(caixa, 24, fill=CARTAO)
-        px0, px1 = x0 + 32, x1 - 32
-        self.texto(d, (px0, y0 + 30), nome, "titulo", SECUNDARIO)
-        self.texto(d, (px0, y0 + 100), num(valor) + "%", "valor_menor", TEXTO)
-        self.texto(d, (px0, y0 + 205), detalhe, "detalhe", SECUNDARIO)
-        by = y1 - 52
-        d.rounded_rectangle((px0, by, px1, by + 20), 10, fill=LINHA)
-        if valor:
-            d.rounded_rectangle((px0, by, px0 + (px1 - px0) * min(valor, 100) / 100, by + 20), 10, fill=AZUL)
-
+        cor = cor_nivel(valor, (60, 75, 90))
+        px0, px1 = x0 + 40, x1 - 36
+        self.texto(d, (px0, y0 + 34), nome, "titulo", cor)
+        self.texto(d, (px1, y0 + 18), num(valor) + "%", "valor_menor", TEXTO, "ra")
+        self.texto(d, (px0, y0 + 150), detalhe, "detalhe", SECUNDARIO)
+        n, vao, by, alto = 24, 8, y1 - 80, 34  # barra em segmentos inclinados
+        larg = (px1 - px0 - (n - 1) * vao) / n
+        cheios = round(min(valor or 0, 100) / 100 * n)
+        for i in range(n):
+            x = px0 + i * (larg + vao)
+            cs = mistura("#ffffff", cor, 0.35) if i == cheios - 1 else cor if i < cheios else LINHA
+            d.polygon([(x + 8, by), (x + larg, by), (x + larg - 8, by + alto), (x, by + alto)], fill=cs)
     def cartao_perfil(self, d, ativo, apertado):
-        x0, y0, x1, y1 = caixa = cartoes()["perfil"]
-        d.rounded_rectangle(caixa, 24, fill=CARTAO)
-        self.texto(d, (x0 + 32, y0 + 30), "Perfil", "titulo", SECUNDARIO)
+        x0, y0, x1, y1 = cartoes()["perfil"]
+        self.texto(d, (x0 + 40, y0 + 34), "PERFIL", "titulo", COR_PERFIL.get(ativo, SECUNDARIO))
         if ativo is None:
-            self.texto(d, (x1 - 32, y0 + 36), "outro plano no Windows", "detalhe", SECUNDARIO, "ra")
+            self.texto(d, (x1 - 36, y0 + 40), "outro plano no Windows", "detalhe", SECUNDARIO, "ra")
         agora = time.monotonic()
         for i, (nome, rotulo) in enumerate(PERFIS):
             b = retangulo_perfil(i)
-            cor = AZUL if nome == ativo else BOTAO_ATIVO if agora - apertado.get("perfil-" + nome, 0) < 0.3 else BOTAO
-            d.rounded_rectangle(b, 20, fill=cor)
-            self.texto(d, ((b[0] + b[2]) // 2, (b[1] + b[3]) // 2), rotulo, "musica", TEXTO, "mm")
-
+            self.botao(d, b, COR_PERFIL[nome], nome == ativo, agora - apertado.get("perfil-" + nome, 0) < 0.3)
+            self.texto(d, ((b[0] + b[2]) // 2, (b[1] + b[3]) // 2 + 4), rotulo.upper(), "musica",
+                       TEXTO if nome == ativo else SECUNDARIO, "mm")
     def cortar(self, d, txt, fonte, largura):
         """Encurta o texto com reticências até caber na largura."""
         if d.textlength(txt, font=self.f[fonte]) <= largura:
@@ -444,24 +546,27 @@ class Tela:
         return txt.rstrip() + "…"
 
     def painel(self, hora, dados, hist, apertado):
-        img = self.Image.new("RGB", (LARGURA, ALTURA), FUNDO)
-        d = self.ImageDraw.Draw(img)
-        self.texto(d, (MARGEM + 8, TOPO // 2 + 4), hora, "hora", TEXTO, "lm")
-        if not dados.get("afterburner"):
-            self.texto(d, (LARGURA - MARGEM - 8, TOPO // 2 + 4), "Abra o MSI Afterburner", "aviso", AVISO, "rm")
         c = cartoes()
+        ram = pct(dados.get("ram_usada"), dados.get("ram_total"))
+        img = self.fundo(((c["cpu"], cor_nivel(dados.get("cpu_temp"))), (c["gpu"], cor_nivel(dados.get("gpu_temp"))),
+                          (c["ram"], cor_nivel(ram, (60, 75, 90))),
+                          (c["perfil"], COR_PERFIL.get(dados.get("perfil"), DESCANSO_COR))))
+        d = self.ImageDraw.Draw(img)
+        self.topo(d, hora)
+        if not dados.get("afterburner"):
+            self.texto(d, (LARGURA - MARGEM - 8, TOPO // 2 - 4), "ABRA O MSI AFTERBURNER", "aviso", AVISO, "rm")
         vram = "—" if dados.get("vram_mb") is None else num(dados["vram_mb"] / 1024, 1)
         if dados.get("vram_total_mb"):
             vram += " / " + num(dados["vram_total_mb"] / 1024, 1)
-        self.cartao_processador(d, c["cpu"], "CPU", dados.get("cpu"),
+        self.cartao_processador(img, d, c["cpu"], "CPU", dados.get("cpu"),
                                 " · %s W" % num(dados.get("cpu_watts")), dados.get("cpu_temp"), hist["cpu"], hist["cpu_temp"])
-        self.cartao_processador(d, c["gpu"], "GPU", dados.get("gpu"),
+        self.cartao_processador(img, d, c["gpu"], "GPU", dados.get("gpu"),
                                 " · %s W · fan %s%% · VRAM %s GB" % (num(dados.get("gpu_watts")), num(dados.get("gpu_fan")), vram),
                                 dados.get("gpu_temp"), hist["gpu"], hist["gpu_temp"])
         ram_u, ram_t = dados.get("ram_usada"), dados.get("ram_total")
         dis_u, dis_t = dados.get("disco_usado"), dados.get("disco_total")
         livres = None if dis_u is None or dis_t is None else (dis_t - dis_u) / GB
-        self.cartao_barra(d, c["ram"], "RAM", pct(ram_u, ram_t), "%s de %s GB · Disco C: %s GB livres" % (
+        self.cartao_barra(d, c["ram"], "RAM", ram, "%s de %s GB · Disco C: %s GB livres" % (
             num(ram_u and ram_u / GB, 1), num(ram_t and ram_t / GB, 1), num(livres)))
         self.cartao_perfil(d, dados.get("perfil"), apertado)
         return img
